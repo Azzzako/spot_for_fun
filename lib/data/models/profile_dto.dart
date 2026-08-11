@@ -1,7 +1,7 @@
 import 'user_role.dart';
 
-class Profile {
-  Profile({
+class ProfileDto {
+  ProfileDto({
     required this.id,
     required this.username,
     this.avatarUrl,
@@ -19,8 +19,8 @@ class Profile {
 
   bool get isAdmin => role == UserRole.admin;
 
-  factory Profile.fromMap(Map<String, dynamic> map) {
-    return Profile(
+  factory ProfileDto.fromMap(Map<String, dynamic> map) {
+    return ProfileDto(
       id: map['id'] as String,
       username: (map['username'] as String?) ?? '',
       avatarUrl: map['avatar_url'] as String?,
@@ -38,8 +38,12 @@ class Profile {
         'fcm_token': fcmToken,
       };
 
-  Profile copyWith({String? username, String? avatarUrl, String? fcmToken}) {
-    return Profile(
+  ProfileDto copyWith({
+    String? username,
+    String? avatarUrl,
+    String? fcmToken,
+  }) {
+    return ProfileDto(
       id: id,
       username: username ?? this.username,
       avatarUrl: avatarUrl ?? this.avatarUrl,

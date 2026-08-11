@@ -1,5 +1,5 @@
-class SpotRating {
-  SpotRating({
+class SpotRatingDto {
+  SpotRatingDto({
     required this.id,
     required this.spotId,
     required this.userId,
@@ -17,8 +17,8 @@ class SpotRating {
   final DateTime createdAt;
   final String? userName;
 
-  factory SpotRating.fromMap(Map<String, dynamic> map) {
-    return SpotRating(
+  factory SpotRatingDto.fromMap(Map<String, dynamic> map) {
+    return SpotRatingDto(
       id: map['id'] as String,
       spotId: map['spot_id'] as String,
       userId: map['user_id'] as String,

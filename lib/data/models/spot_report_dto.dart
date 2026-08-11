@@ -11,8 +11,8 @@ extension ReportStatusX on ReportStatus {
   }
 }
 
-class SpotReport {
-  SpotReport({
+class SpotReportDto {
+  SpotReportDto({
     required this.id,
     required this.spotId,
     required this.reporterId,
@@ -28,8 +28,8 @@ class SpotReport {
   final ReportStatus status;
   final DateTime createdAt;
 
-  factory SpotReport.fromMap(Map<String, dynamic> map) {
-    return SpotReport(
+  factory SpotReportDto.fromMap(Map<String, dynamic> map) {
+    return SpotReportDto(
       id: map['id'] as String,
       spotId: map['spot_id'] as String,
       reporterId: map['reporter_id'] as String,

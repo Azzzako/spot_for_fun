@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:spot_for_fun/data/models/enums.dart';
-import 'package:spot_for_fun/data/models/spot.dart';
-import 'package:spot_for_fun/data/models/spot_photo.dart';
+import 'package:spot_for_fun/data/models/spot_dto.dart';
+import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 
 final spotByIdProvider =
-    FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
+    FutureProvider.family.autoDispose<SpotDto, String>((ref, id) async {
   final repo = ref.watch(spotRepositoryProvider);
   return repo.fetchById(id);
 });
@@ -52,7 +52,7 @@ class SpotDetailScreen extends ConsumerWidget {
 
 class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.spot});
-  final Spot spot;
+  final SpotDto spot;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -238,7 +238,7 @@ class _DetailBody extends ConsumerWidget {
 
 class _PhotoGallery extends StatelessWidget {
   const _PhotoGallery({required this.photos});
-  final List<SpotPhoto> photos;
+  final List<SpotPhotoDto> photos;
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +319,7 @@ class _RatingBadge extends StatelessWidget {
 
 class _MetaRow extends StatelessWidget {
   const _MetaRow({required this.spot});
-  final Spot spot;
+  final SpotDto spot;
 
   @override
   Widget build(BuildContext context) {

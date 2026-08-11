@@ -1,8 +1,8 @@
 import 'enums.dart';
-import 'spot_photo.dart';
+import 'spot_photo_dto.dart';
 
-class Spot {
-  Spot({
+class SpotDto {
+  SpotDto({
     required this.id,
     required this.authorId,
     required this.name,
@@ -44,11 +44,11 @@ class Spot {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  final List<SpotPhoto> photos;
+  final List<SpotPhotoDto> photos;
   final String? authorName;
 
-  factory Spot.fromMap(Map<String, dynamic> map) {
-    return Spot(
+  factory SpotDto.fromMap(Map<String, dynamic> map) {
+    return SpotDto(
       id: map['id'] as String,
       authorId: map['author_id'] as String,
       name: map['name'] as String,

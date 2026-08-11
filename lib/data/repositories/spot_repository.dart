@@ -6,8 +6,8 @@ import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 import 'package:spot_for_fun/data/models/enums.dart';
-import 'package:spot_for_fun/data/models/spot.dart';
-import 'package:spot_for_fun/data/models/spot_photo.dart';
+import 'package:spot_for_fun/data/models/spot_dto.dart';
+import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 
 class SpotFilter {
   const SpotFilter({
@@ -40,7 +40,7 @@ class SpotRepository {
   SpotRepository(this._client);
   final SupabaseClient _client;
 
-  Future<List<Spot>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
+  Future<List<SpotDto>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     var query = _client
         .from('spots')
         .select('*, spot_photos(*)')
@@ -63,7 +63,7 @@ class SpotRepository {
     return _mapList(res as List);
   }
 
-  Future<Spot> fetchById(String spotId) async {
+  Future<SpotDto> fetchById(String spotId) async {
     final res = await _client
         .from('spots')
         .select('*, spot_photos(*)')
@@ -75,7 +75,7 @@ class SpotRepository {
     return _mapOne(res);
   }
 
-  Future<List<SpotPhoto>> fetchPhotos(String spotId) async {
+  Future<List<SpotPhotoDto>> fetchPhotos(String spotId) async {
     final res = await _client
         .from('spot_photos')
         .select()
@@ -83,7 +83,7 @@ class SpotRepository {
         .order('position');
     return (res as List)
         .cast<Map<String, dynamic>>()
-        .map(SpotPhoto.fromMap)
+        .map(SpotPhotoDto.fromMap)
         .toList();
   }
 
@@ -97,7 +97,7 @@ class SpotRepository {
     });
   }
 
-  Future<Spot> createSpot({
+  Future<SpotDto> createSpot({
     required String name,
     required String description,
     required double lat,
@@ -155,7 +155,7 @@ class SpotRepository {
         .getPublicUrl(path);
   }
 
-  Future<SpotPhoto> attachSpotPhoto({
+  Future<SpotPhotoDto> attachSpotPhoto({
     required String spotId,
     required String url,
     required int position,
@@ -169,17 +169,17 @@ class SpotRepository {
         })
         .select()
         .single();
-    return SpotPhoto.fromMap(res);
+    return SpotPhotoDto.fromMap(res);
   }
 
-  Spot _mapOne(Map<String, dynamic> map) {
+  SpotDto _mapOne(Map<String, dynamic> map) {
     final photos = (map['spot_photos'] as List?)
             ?.cast<Map<String, dynamic>>()
-            .map(SpotPhoto.fromMap)
+            .map(SpotPhotoDto.fromMap)
             .toList() ??
-        const <SpotPhoto>[];
-    final spot = Spot.fromMap(map);
-    return Spot(
+        const <SpotPhotoDto>[];
+    final spot = SpotDto.fromMap(map);
+    return SpotDto(
       id: spot.id,
       authorId: spot.authorId,
       name: spot.name,
@@ -202,7 +202,7 @@ class SpotRepository {
     );
   }
 
-  List<Spot> _mapList(List data) {
+  List<SpotDto> _mapList(List data) {
     return data
         .cast<Map<String, dynamic>>()
         .map(_mapOne)
@@ -218,7 +218,7 @@ final spotRepositoryProvider = Provider<SpotRepository>((ref) {
 final spotFilterProvider =
     StateProvider<SpotFilter>((ref) => const SpotFilter());
 
-final approvedSpotsProvider = FutureProvider<List<Spot>>((ref) async {
+final approvedSpotsProvider = FutureProvider<List<SpotDto>>((ref) async {
   final repo = ref.watch(spotRepositoryProvider);
   final filter = ref.watch(spotFilterProvider);
   return repo.fetchApproved(filter: filter);

@@ -1,5 +1,5 @@
-class SpotPhoto {
-  SpotPhoto({
+class SpotPhotoDto {
+  SpotPhotoDto({
     required this.id,
     required this.spotId,
     required this.url,
@@ -11,8 +11,8 @@ class SpotPhoto {
   final String url;
   final int position;
 
-  factory SpotPhoto.fromMap(Map<String, dynamic> map) {
-    return SpotPhoto(
+  factory SpotPhotoDto.fromMap(Map<String, dynamic> map) {
+    return SpotPhotoDto(
       id: map['id'] as String,
       spotId: map['spot_id'] as String,
       url: map['url'] as String,
