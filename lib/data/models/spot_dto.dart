@@ -1,4 +1,4 @@
-import 'enums.dart';
+import 'package:spot_for_fun/domain/enums.dart';
 import 'spot_photo_dto.dart';
 
 class SpotDto {

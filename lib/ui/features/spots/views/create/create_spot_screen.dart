@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';

@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
-import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 

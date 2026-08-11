@@ -1,15 +1,4 @@
-enum ReportStatus { open, reviewed, dismissed }
-
-extension ReportStatusX on ReportStatus {
-  String get dbValue => name;
-  static ReportStatus fromDb(Object? raw) {
-    return switch (raw) {
-      'reviewed' => ReportStatus.reviewed,
-      'dismissed' => ReportStatus.dismissed,
-      _ => ReportStatus.open,
-    };
-  }
-}
+import 'package:spot_for_fun/domain/models/spot_report.dart';
 
 class SpotReportDto {
   SpotReportDto({

@@ -1,7 +1,7 @@
 import 'package:spot_for_fun/domain/user_role.dart';
 
-class ProfileDto {
-  ProfileDto({
+class Profile {
+  const Profile({
     required this.id,
     required this.username,
     this.avatarUrl,
@@ -19,31 +19,12 @@ class ProfileDto {
 
   bool get isAdmin => role == UserRole.admin;
 
-  factory ProfileDto.fromMap(Map<String, dynamic> map) {
-    return ProfileDto(
-      id: map['id'] as String,
-      username: (map['username'] as String?) ?? '',
-      avatarUrl: map['avatar_url'] as String?,
-      role: UserRoleX.fromDb(map['role']),
-      fcmToken: map['fcm_token'] as String?,
-      createdAt: DateTime.parse(map['created_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'username': username,
-        'avatar_url': avatarUrl,
-        'role': role.dbValue,
-        'fcm_token': fcmToken,
-      };
-
-  ProfileDto copyWith({
+  Profile copyWith({
     String? username,
     String? avatarUrl,
     String? fcmToken,
   }) {
-    return ProfileDto(
+    return Profile(
       id: id,
       username: username ?? this.username,
       avatarUrl: avatarUrl ?? this.avatarUrl,

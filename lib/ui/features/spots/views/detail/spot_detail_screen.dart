@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
