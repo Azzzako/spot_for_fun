@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/data/repositories/auth_repository.dart';
+import 'package:spot_for_fun/ui/features/auth/view_models/sign_up_view_model.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -17,7 +17,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -29,53 +28,58 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    try {
-      final result = await ref.read(authRepositoryProvider).signUp(
-            email: _emailCtrl.text.trim(),
-            password: _passCtrl.text,
-            username: _usernameCtrl.text.trim(),
-          );
-      if (!mounted) return;
-      if (result.needsEmailConfirmation) {
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Verifica tu correo'),
-            content: Text(
-              'Te enviamos un correo a ${_emailCtrl.text.trim()}. Confírmalo antes de iniciar sesión.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+    final result = await ref.read(signUpViewModelProvider.notifier).signUp(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
+          username: _usernameCtrl.text.trim(),
         );
-        if (!mounted) return;
-        context.go(AppRoutes.login);
-      } else {
-        context.go(AppRoutes.map);
-      }
-    } on AppAuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
+    if (!mounted) return;
+    if (result.ok && !result.needsEmailConfirmation) {
+      context.go(AppRoutes.map);
+      return;
+    }
+    if (result.ok && result.needsEmailConfirmation) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Verifica tu correo'),
+          content: Text(
+            'Te enviamos un correo a ${_emailCtrl.text.trim()}. '
+            'Confírmalo antes de iniciar sesión.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      context.go(AppRoutes.login);
     }
   }
 
-  void _showError(String msg) {
+  void _showSnack(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(msg)));
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(signUpViewModelProvider);
+    final loading = state.status == AuthFormStatus.loading;
     final theme = Theme.of(context);
+
+    ref.listen(signUpViewModelProvider, (prev, next) {
+      if (next.status == AuthFormStatus.error &&
+          next.errorMessage != null &&
+          prev?.errorMessage != next.errorMessage) {
+        _showSnack(next.errorMessage!);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Crear cuenta')),
       body: SafeArea(
@@ -148,8 +152,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
+                      onPressed: loading ? null : _submit,
+                      child: loading
                           ? const SizedBox(
                               height: 20,
                               width: 20,

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/data/repositories/auth_repository.dart';
+import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +16,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -27,57 +26,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    try {
-      await ref.read(authRepositoryProvider).signIn(
-            email: _emailCtrl.text.trim(),
-            password: _passCtrl.text,
-          );
-      if (!mounted) return;
+    final ok = await ref.read(signInViewModelProvider.notifier).signIn(
+          email: _emailCtrl.text.trim(),
+          password: _passCtrl.text,
+        );
+    if (!mounted) return;
+    if (ok) {
       context.go(AppRoutes.map);
-    } on AppAuthException catch (e) {
-      _showError(_mapAuthError(e));
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    setState(() => _loading = true);
-    try {
-      await ref.read(authRepositoryProvider).signInWithGoogle();
-      if (!mounted) return;
-      context.go(AppRoutes.map);
-    } on AppAuthException catch (e) {
-      _showError(_mapAuthError(e));
-      _showError(_mapAuthError(e));
-    } catch (e) {
-      _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  void _showError(String msg) {
+  void _showSnack(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  String _mapAuthError(AppAuthException e) {
-    final raw = e.message.toLowerCase();
-    if (raw.contains('email not confirmed')) return 'Confirma tu correo antes de entrar.';
-    if (raw.contains('invalid login') || raw.contains('invalid credentials')) {
-      return 'Correo o contraseña incorrectos.';
-    }
-    return e.message;
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(signInViewModelProvider);
+    final loading = state.status == AuthFormStatus.loading;
     final theme = Theme.of(context);
+
+    ref.listen(signInViewModelProvider, (prev, next) {
+      if (next.status == AuthFormStatus.error &&
+          next.errorMessage != null &&
+          prev?.errorMessage != next.errorMessage) {
+        _showSnack(next.errorMessage!);
+      }
+    });
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -139,8 +117,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
-                      onPressed: _loading ? null : _submit,
-                      child: _loading
+                      onPressed: loading ? null : _submit,
+                      child: loading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -161,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _loading ? null : _signInWithGoogle,
+                      onPressed: loading ? null : _submit,
                       icon: const Icon(Icons.g_mobiledata, size: 28),
                       label: const Text('Continuar con Google'),
                     ),
@@ -174,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
                     TextButton(
-                      onPressed: _loading
+                      onPressed: loading
                           ? null
                           : () => context.push(AppRoutes.register),
                       child: const Text('¿No tienes cuenta? Crear una'),
