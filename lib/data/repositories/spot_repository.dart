@@ -6,6 +6,8 @@ import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/domain/mappers/spot_mapper.dart';
+import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 
@@ -40,7 +42,7 @@ class SpotRepository {
   SpotRepository(this._client);
   final SupabaseClient _client;
 
-  Future<List<SpotDto>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
+  Future<List<Spot>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     var query = _client
         .from('spots')
         .select('*, spot_photos(*)')
@@ -60,10 +62,14 @@ class SpotRepository {
     }
 
     final res = await query.order('avg_rating', ascending: false);
-    return _mapList(res as List);
+    return (res as List)
+        .cast<Map<String, dynamic>>()
+        .map(_spotDtoFromRow)
+        .map((d) => d.toDomain())
+        .toList(growable: false);
   }
 
-  Future<SpotDto> fetchById(String spotId) async {
+  Future<Spot> fetchById(String spotId) async {
     final res = await _client
         .from('spots')
         .select('*, spot_photos(*)')
@@ -72,10 +78,10 @@ class SpotRepository {
     if (res == null) {
       throw StateError('Spot no encontrado');
     }
-    return _mapOne(res);
+    return _spotDtoFromRow(res).toDomain();
   }
 
-  Future<List<SpotPhotoDto>> fetchPhotos(String spotId) async {
+  Future<List<SpotPhoto>> fetchPhotos(String spotId) async {
     final res = await _client
         .from('spot_photos')
         .select()
@@ -84,7 +90,8 @@ class SpotRepository {
     return (res as List)
         .cast<Map<String, dynamic>>()
         .map(SpotPhotoDto.fromMap)
-        .toList();
+        .map((d) => d.toDomain())
+        .toList(growable: false);
   }
 
   Future<void> reportSpot({
@@ -97,7 +104,7 @@ class SpotRepository {
     });
   }
 
-  Future<SpotDto> createSpot({
+  Future<Spot> createSpot({
     required String name,
     required String description,
     required double lat,
@@ -127,7 +134,7 @@ class SpotRepository {
         })
         .select('*, spot_photos(*)')
         .single();
-    return _mapOne(res);
+    return _spotDtoFromRow(res).toDomain();
   }
 
   Future<String> uploadSpotPhoto({
@@ -155,7 +162,7 @@ class SpotRepository {
         .getPublicUrl(path);
   }
 
-  Future<SpotPhotoDto> attachSpotPhoto({
+  Future<SpotPhoto> attachSpotPhoto({
     required String spotId,
     required String url,
     required int position,
@@ -169,44 +176,38 @@ class SpotRepository {
         })
         .select()
         .single();
-    return SpotPhotoDto.fromMap(res);
+    return SpotPhotoDto.fromMap(res).toDomain();
   }
 
-  SpotDto _mapOne(Map<String, dynamic> map) {
+  SpotDto _spotDtoFromRow(Map<String, dynamic> map) {
     final photos = (map['spot_photos'] as List?)
             ?.cast<Map<String, dynamic>>()
             .map(SpotPhotoDto.fromMap)
             .toList() ??
         const <SpotPhotoDto>[];
-    final spot = SpotDto.fromMap(map);
+    final base = SpotDto.fromMap(map);
     return SpotDto(
-      id: spot.id,
-      authorId: spot.authorId,
-      name: spot.name,
-      description: spot.description,
-      lat: spot.lat,
-      lng: spot.lng,
-      type: spot.type,
-      difficulty: spot.difficulty,
-      bestTime: spot.bestTime,
-      safetyNotes: spot.safetyNotes,
-      status: spot.status,
-      rejectReason: spot.rejectReason,
-      approvedBy: spot.approvedBy,
-      approvedAt: spot.approvedAt,
-      avgRating: spot.avgRating,
-      ratingsCount: spot.ratingsCount,
-      createdAt: spot.createdAt,
-      updatedAt: spot.updatedAt,
+      id: base.id,
+      authorId: base.authorId,
+      name: base.name,
+      description: base.description,
+      lat: base.lat,
+      lng: base.lng,
+      type: base.type,
+      difficulty: base.difficulty,
+      bestTime: base.bestTime,
+      safetyNotes: base.safetyNotes,
+      status: base.status,
+      rejectReason: base.rejectReason,
+      approvedBy: base.approvedBy,
+      approvedAt: base.approvedAt,
+      avgRating: base.avgRating,
+      ratingsCount: base.ratingsCount,
+      createdAt: base.createdAt,
+      updatedAt: base.updatedAt,
       photos: photos,
+      authorName: base.authorName,
     );
-  }
-
-  List<SpotDto> _mapList(List data) {
-    return data
-        .cast<Map<String, dynamic>>()
-        .map(_mapOne)
-        .toList(growable: false);
   }
 }
 
@@ -218,7 +219,7 @@ final spotRepositoryProvider = Provider<SpotRepository>((ref) {
 final spotFilterProvider =
     StateProvider<SpotFilter>((ref) => const SpotFilter());
 
-final approvedSpotsProvider = FutureProvider<List<SpotDto>>((ref) async {
+final approvedSpotsProvider = FutureProvider<List<Spot>>((ref) async {
   final repo = ref.watch(spotRepositoryProvider);
   final filter = ref.watch(spotFilterProvider);
   return repo.fetchApproved(filter: filter);
