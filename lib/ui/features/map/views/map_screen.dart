@@ -9,6 +9,7 @@ import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_drawer.dart';
 
 class MapScreen extends ConsumerStatefulWidget {

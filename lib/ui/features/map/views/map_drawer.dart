@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
-import 'package:spot_for_fun/data/repositories/auth_repository.dart';
 
 class MapDrawer extends ConsumerWidget {
   const MapDrawer({super.key, required this.onOpenFilters});

@@ -8,6 +8,7 @@ import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
+import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 
 class CreateSpotScreen extends ConsumerStatefulWidget {
@@ -88,8 +89,14 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     });
 
     final repo = ref.read(spotRepositoryProvider);
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) {
+      _snack('Sesion expirada. Vuelve a iniciar sesion.');
+      return;
+    }
     try {
       final spot = await repo.createSpot(
+        authorId: userId,
         name: _nameCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         lat: _picked.latitude,
@@ -108,6 +115,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
         if (photo.source != PhotoSource.file) continue;
         try {
           final url = await repo.uploadSpotPhoto(
+            userId: userId,
             spotId: spot.id,
             bytes: photo.bytes!,
             ext: photo.ext,

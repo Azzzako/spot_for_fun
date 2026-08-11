@@ -1,7 +1,10 @@
+export 'package:spot_for_fun/data/repositories/auth_repository.dart'
+    show authRepositoryProvider;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:spot_for_fun/data/models/profile_dto.dart';
+import 'package:spot_for_fun/data/services/profile_service.dart';
 import 'package:spot_for_fun/domain/mappers/profile_mapper.dart';
 import 'package:spot_for_fun/domain/models/profile.dart';
 import 'package:spot_for_fun/domain/user_role.dart';
@@ -35,12 +38,14 @@ final currentUserRoleProvider = Provider<UserRole>((ref) {
   );
 });
 
+final profileServiceProvider = Provider<ProfileService>((ref) {
+  return ProfileService(ref.watch(supabaseClientProvider));
+});
+
 final currentProfileProvider = FutureProvider<Profile?>((ref) async {
   final uid = ref.watch(currentUserIdProvider);
   if (uid == null) return null;
-  final client = ref.watch(supabaseClientProvider);
-  final res =
-      await client.from('profiles').select().eq('id', uid).maybeSingle();
-  if (res == null) return null;
-  return ProfileDto.fromMap(res).toDomain();
+  final service = ref.watch(profileServiceProvider);
+  final dto = await service.fetchById(uid);
+  return dto?.toDomain();
 });
