@@ -1,31 +1,79 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+enum LocationStatus {
+  granted,
+  serviceOff,
+  denied,
+  deniedForever,
+  error,
+}
+
 class LocationHelper {
   LocationHelper._();
 
-  static Future<LatLng> currentOrFallback({LatLng fallback = const LatLng(19.4326, -99.1332)}) async {
+  static const LatLng neutralCenter = LatLng(0, 0);
+  static const double neutralZoom = 2;
+
+  static Future<LocationStatus> ensurePermission() async {
     try {
-      final enabled = await Geolocator.isLocationServiceEnabled();
-      if (!enabled) return fallback;
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return LocationStatus.serviceOff;
 
       var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
-        return fallback;
-      }
 
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
+      return switch (perm) {
+        LocationPermission.always ||
+        LocationPermission.whileInUse =>
+          LocationStatus.granted,
+        LocationPermission.deniedForever =>
+          LocationStatus.deniedForever,
+        LocationPermission.denied || LocationPermission.unableToDetermine =>
+          LocationStatus.denied,
+      };
+    } catch (_) {
+      return LocationStatus.error;
+    }
+  }
+
+  static Future<Position?> currentPosition({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
+          timeLimit: timeout,
         ),
       );
-      return LatLng(pos.latitude, pos.longitude);
     } catch (_) {
-      return fallback;
+      return null;
+    }
+  }
+
+  static Future<LatLng> currentLatLng({
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final pos = await currentPosition(timeout: timeout);
+    return pos == null ? neutralCenter : LatLng(pos.latitude, pos.longitude);
+  }
+
+  static Future<bool> openAppSettings() async {
+    try {
+      return await Geolocator.openAppSettings();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> openLocationSettings() async {
+    try {
+      return await Geolocator.openLocationSettings();
+    } catch (_) {
+      return false;
     }
   }
 }

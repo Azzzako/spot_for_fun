@@ -66,6 +66,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ubicar tu posicion para mostrar spots cerca de ti.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

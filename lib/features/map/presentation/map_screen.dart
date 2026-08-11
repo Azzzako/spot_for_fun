@@ -20,38 +20,133 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _mapController = MapController();
-  LatLng _currentLocation = const LatLng(19.4326, -99.1332);
+  LatLng _currentLocation = LocationHelper.neutralCenter;
   bool _locating = false;
-  bool _centered = false;
+  bool _bootstrapped = false;
+  bool _hasRealLocation = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureInitialLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapLocation());
   }
 
-  Future<void> _ensureInitialLocation() async {
-    if (_centered) return;
-    setState(() => _locating = true);
-    final pos = await LocationHelper.currentOrFallback(fallback: _currentLocation);
-    if (!mounted) return;
-    setState(() {
-      _currentLocation = pos;
-      _locating = false;
-      _centered = true;
-    });
-    _mapController.move(pos, 14);
+  Future<void> _bootstrapLocation() async {
+    if (_bootstrapped) return;
+    await _locateAndCenter(zoom: 14, showSnackbars: true);
+    if (mounted) _bootstrapped = true;
   }
 
-  Future<void> _recenter() async {
+  Future<void> _recenter() => _locateAndCenter(zoom: 15, showSnackbars: true);
+
+  Future<void> _locateAndCenter({
+    required double zoom,
+    required bool showSnackbars,
+  }) async {
     setState(() => _locating = true);
-    final pos = await LocationHelper.currentOrFallback(fallback: _currentLocation);
+    final status = await LocationHelper.ensurePermission();
+
     if (!mounted) return;
+
+    switch (status) {
+      case LocationStatus.granted:
+        final pos = await LocationHelper.currentPosition();
+        if (!mounted) return;
+        if (pos != null) {
+          _applyLocation(LatLng(pos.latitude, pos.longitude), zoom);
+        } else {
+          setState(() => _locating = false);
+          if (showSnackbars) {
+            _showStatusSnackbar(
+              'No se pudo obtener tu ubicacion',
+              actionLabel: 'Reintentar',
+              onAction: _recenter,
+            );
+          }
+        }
+        break;
+
+      case LocationStatus.serviceOff:
+        setState(() => _locating = false);
+        if (showSnackbars) {
+          _showStatusSnackbar(
+            'Activa tu GPS para mostrar tu ubicacion',
+            actionLabel: 'Configurar',
+            onAction: () async {
+              await LocationHelper.openLocationSettings();
+            },
+          );
+        }
+        break;
+
+      case LocationStatus.denied:
+        setState(() => _locating = false);
+        if (showSnackbars) {
+          _showStatusSnackbar(
+            'Sin permiso de ubicacion',
+            actionLabel: 'Reintentar',
+            onAction: _recenter,
+          );
+        }
+        break;
+
+      case LocationStatus.deniedForever:
+        setState(() => _locating = false);
+        if (showSnackbars) {
+          _showStatusSnackbar(
+            'Permiso de ubicacion bloqueado',
+            actionLabel: 'Abrir ajustes',
+            onAction: () async {
+              await LocationHelper.openAppSettings();
+            },
+            persistent: true,
+          );
+        }
+        break;
+
+      case LocationStatus.error:
+        setState(() => _locating = false);
+        if (showSnackbars) {
+          _showStatusSnackbar(
+            'Error al acceder a la ubicacion',
+            actionLabel: 'Reintentar',
+            onAction: _recenter,
+          );
+        }
+        break;
+    }
+  }
+
+  void _applyLocation(LatLng latLng, double zoom) {
     setState(() {
-      _currentLocation = pos;
+      _currentLocation = latLng;
       _locating = false;
+      _hasRealLocation = true;
     });
-    _mapController.move(pos, 15);
+    _mapController.move(latLng, zoom);
+  }
+
+  void _showStatusSnackbar(
+    String message, {
+    required String actionLabel,
+    required VoidCallback onAction,
+    bool persistent = false,
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: persistent
+            ? const Duration(seconds: 8)
+            : const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: actionLabel,
+          onPressed: onAction,
+        ),
+      ),
+    );
   }
 
   void _openFilters() {
@@ -119,20 +214,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
               MarkerLayer(
                 markers: [
-                  Marker(
-                    point: _currentLocation,
-                    width: 32,
-                    height: 32,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
+                  if (_hasRealLocation)
+                    Marker(
+                      point: _currentLocation,
+                      width: 32,
+                      height: 32,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: const Icon(Icons.person_pin_circle,
+                            color: Colors.white, size: 16),
                       ),
-                      child: const Icon(Icons.person_pin_circle,
-                          color: Colors.white, size: 16),
                     ),
-                  ),
                   ...spotsAsync.when(
                     data: (spots) => spots.map((s) {
                       final kind = classifySpotKind(s.type.dbValue);
