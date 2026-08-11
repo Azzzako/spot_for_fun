@@ -68,6 +68,12 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Ubicar tu posicion para mostrar spots cerca de ti.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tomar fotos del spot para acompanar tu envio.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Adjuntar fotos existentes del spot que quieres compartir.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Guardar fotos tomadas del spot en tu biblioteca.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
