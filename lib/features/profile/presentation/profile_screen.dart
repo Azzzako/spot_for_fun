@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/theme_mode_pref_provider.dart';
+import '../../../core/router/app_router.dart';
+import '../../auth/data/auth_repository.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,7 +17,9 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Tema'),
+          const SizedBox(height: 8),
+          Text('Tema', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
           SegmentedButton<ThemeModePref>(
             segments: const [
               ButtonSegment(value: ThemeModePref.system, label: Text('Auto')),
@@ -24,6 +29,36 @@ class ProfileScreen extends ConsumerWidget {
             selected: {theme.mode},
             onSelectionChanged: (set) =>
                 theme.setMode(set.first),
+          ),
+          const SizedBox(height: 32),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Cerrar sesion'),
+                  content: const Text(
+                    'Tendras que volver a iniciar sesion para usar la app.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: const Text('Cerrar sesion'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await ref.read(authRepositoryProvider).signOut();
+                if (context.mounted) context.go(AppRoutes.login);
+              }
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text('Cerrar sesion'),
           ),
         ],
       ),

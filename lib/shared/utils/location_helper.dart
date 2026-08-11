@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -17,24 +18,28 @@ class LocationHelper {
 
   static Future<LocationStatus> ensurePermission() async {
     try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return LocationStatus.serviceOff;
-
       var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
 
-      return switch (perm) {
-        LocationPermission.always ||
-        LocationPermission.whileInUse =>
-          LocationStatus.granted,
-        LocationPermission.deniedForever =>
-          LocationStatus.deniedForever,
-        LocationPermission.denied || LocationPermission.unableToDetermine =>
-          LocationStatus.denied,
-      };
-    } catch (_) {
+      final granted = perm == LocationPermission.always ||
+          perm == LocationPermission.whileInUse;
+
+      if (!granted) {
+        return switch (perm) {
+          LocationPermission.deniedForever =>
+            LocationStatus.deniedForever,
+          _ => LocationStatus.denied,
+        };
+      }
+
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return LocationStatus.serviceOff;
+
+      return LocationStatus.granted;
+    } catch (e) {
+      debugPrint('[LocationHelper] ensurePermission error: $e');
       return LocationStatus.error;
     }
   }
