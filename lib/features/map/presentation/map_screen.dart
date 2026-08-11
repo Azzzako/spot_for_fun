@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../core/providers/theme_mode_pref_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../shared/models/enums.dart';
 import '../../../shared/utils/location_helper.dart';
 import '../../../shared/widgets/spot_marker.dart';
 import '../../spots/data/spot_repository.dart';
+import 'map_drawer.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -149,23 +149,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  void _openFilters() {
+  void openFilters() {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (_) => const _FiltersSheet(),
     );
-  }
-
-  void _toggleTheme() {
-    final theme = ref.read(themeModePrefProvider);
-    final next = switch (theme.mode) {
-      ThemeModePref.system => ThemeModePref.light,
-      ThemeModePref.light => ThemeModePref.dark,
-      ThemeModePref.dark => ThemeModePref.system,
-    };
-    theme.setMode(next);
   }
 
   @override
@@ -175,26 +165,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final filter = ref.watch(spotFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Spot For Fun'),
-        actions: [
-          IconButton(
-            tooltip: 'Tema',
-            onPressed: _toggleTheme,
-            icon: const Icon(Icons.brightness_6_outlined),
-          ),
-          IconButton(
-            tooltip: 'Mis spots',
-            onPressed: () => context.push(AppRoutes.mySpots),
-            icon: const Icon(Icons.list_alt_outlined),
-          ),
-          IconButton(
-            tooltip: 'Perfil',
-            onPressed: () => context.push(AppRoutes.profile),
-            icon: const Icon(Icons.person_outline),
-          ),
-        ],
-      ),
+      drawer: MapDrawer(onOpenFilters: openFilters),
       body: Stack(
         children: [
           FlutterMap(
@@ -252,6 +223,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ],
               ),
             ],
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 12,
+            child: Builder(
+              builder: (ctx) => Material(
+                color: Theme.of(context).colorScheme.surface,
+                shape: const CircleBorder(),
+                elevation: 2,
+                child: IconButton(
+                  tooltip: 'Menu',
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                ),
+              ),
+            ),
           ),
           if (spotsAsync.isLoading)
             const Positioned(
@@ -344,16 +331,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             child: const Icon(Icons.add_location_alt_outlined),
           ),
         ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-          child: FilledButton.tonalIcon(
-            onPressed: _openFilters,
-            icon: const Icon(Icons.filter_alt_outlined),
-            label: const Text('Filtros'),
-          ),
-        ),
       ),
     );
   }
