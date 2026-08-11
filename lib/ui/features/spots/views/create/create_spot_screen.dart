@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
-import 'package:spot_for_fun/data/repositories/auth_provider.dart';
-import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/ui/features/spots/view_models/create_spot_view_model.dart';
 
 class CreateSpotScreen extends ConsumerStatefulWidget {
   const CreateSpotScreen({super.key});
@@ -26,28 +24,10 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
 
   final MapController _mapController = MapController();
 
-  LatLng _picked = LocationHelper.neutralCenter;
-  bool _locating = true;
-
-  SpotType _type = SpotType.street;
-  SpotDifficulty _difficulty = SpotDifficulty.beginner;
-  final Set<BestTimeSlot> _bestTime = {};
-
-  List<PhotoItem> _photos = const [
-    PhotoItem.asset('assets/sample_spots/skate_01.jpg'),
-    PhotoItem.asset('assets/sample_spots/skate_02.jpg'),
-    PhotoItem.asset('assets/sample_spots/skate_03.jpg'),
-    PhotoItem.asset('assets/sample_spots/skate_04.jpg'),
-  ];
-
-  SubmitState _state = SubmitState.idle;
-  String? _errorMessage;
-  int _uploadedCount = 0;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapLocation());
   }
 
   @override
@@ -58,100 +38,40 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     super.dispose();
   }
 
-  Future<void> _initLocation() async {
-    final status = await LocationHelper.ensurePermission();
-    if (!mounted) return;
-    if (status == LocationStatus.granted) {
-      final pos = await LocationHelper.currentPosition();
-      if (!mounted) return;
-      if (pos != null) {
-        setState(() {
-          _picked = LatLng(pos.latitude, pos.longitude);
-          _locating = false;
-        });
-        _mapController.move(_picked, 15);
-        return;
-      }
-    }
-    setState(() => _locating = false);
+  Future<void> _bootstrapLocation() async {
+    final loc = await ref
+        .read(createSpotViewModelProvider.notifier)
+        .initLocation();
+    if (!mounted || loc == null) return;
+    _mapController.move(loc, 15);
+  }
+
+  Future<void> _relocateFromGps() async {
+    final loc = await ref
+        .read(createSpotViewModelProvider.notifier)
+        .relocateFromGps();
+    if (!mounted || loc == null) return;
+    _mapController.move(loc, 16);
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_bestTime.isEmpty) {
-      _snack('Selecciona al menos un mejor horario');
-      return;
-    }
-    setState(() {
-      _state = SubmitState.uploading;
-      _uploadedCount = 0;
-      _errorMessage = null;
-    });
-
-    final repo = ref.read(spotRepositoryProvider);
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) {
-      _snack('Sesion expirada. Vuelve a iniciar sesion.');
-      return;
-    }
-    try {
-      final spot = await repo.createSpot(
-        authorId: userId,
-        name: _nameCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        lat: _picked.latitude,
-        lng: _picked.longitude,
-        type: _type,
-        difficulty: _difficulty,
-        bestTime: _bestTime.toList(),
-        safetyNotes: _safetyCtrl.text.trim().isEmpty
-            ? null
-            : _safetyCtrl.text.trim(),
-      );
-
-      final photoErrors = <String>[];
-      for (var i = 0; i < _photos.length; i++) {
-        final photo = _photos[i];
-        if (photo.source != PhotoSource.file) continue;
-        try {
-          final url = await repo.uploadSpotPhoto(
-            userId: userId,
-            spotId: spot.id,
-            bytes: photo.bytes!,
-            ext: photo.ext,
-          );
-          await repo.attachSpotPhoto(
-            spotId: spot.id,
-            url: url,
-            position: i,
-          );
-          if (!mounted) return;
-          setState(() => _uploadedCount = i + 1);
-        } catch (e) {
-          photoErrors.add('Foto ${i + 1}: $e');
-        }
-      }
-
-      if (!mounted) return;
-      if (photoErrors.isNotEmpty) {
-        setState(() {
-          _state = SubmitState.partialSuccess;
-          _errorMessage = photoErrors.join('\n');
-        });
-        return;
-      }
-
-      setState(() => _state = SubmitState.success);
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      if (!mounted) return;
+    final vm = ref.read(createSpotViewModelProvider.notifier);
+    final previous = ref.read(createSpotViewModelProvider).submitState;
+    await vm.submit(
+      name: _nameCtrl.text.trim(),
+      description: _descCtrl.text.trim(),
+      safetyNotes: _safetyCtrl.text.trim().isEmpty
+          ? null
+          : _safetyCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    final after = ref.read(createSpotViewModelProvider).submitState;
+    if (after == SubmitState.success && previous != SubmitState.success) {
       _snack('Tu spot esta en revision');
       context.go(AppRoutes.mySpots);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _state = SubmitState.error;
-        _errorMessage = e.toString();
-      });
+    } else if (after == SubmitState.error && ref.read(createSpotViewModelProvider).errorMessage != null) {
+      _snack(ref.read(createSpotViewModelProvider).errorMessage!);
     }
   }
 
@@ -163,9 +83,10 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final busy = _state == SubmitState.uploading;
+    final state = ref.watch(createSpotViewModelProvider);
+    final vm = ref.read(createSpotViewModelProvider.notifier);
     final theme = Theme.of(context);
+    final busy = state.submitState == SubmitState.uploading;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -182,9 +103,12 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: _picked,
+                initialCenter: state.pickedLocation ?? LocationHelper.neutralCenter,
                 initialZoom: 14,
-                onTap: (_, point) => setState(() => _picked = point),
+                onTap: (_, point) {
+                  vm.setPickedLocation(point);
+                  _mapController.move(point, _mapController.camera.zoom);
+                },
               ),
               children: [
                 TileLayer(
@@ -195,22 +119,23 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                 ),
                 MarkerLayer(
                   markers: [
-                    Marker(
-                      point: _picked,
-                      width: 48,
-                      height: 48,
-                      child: const Icon(
-                        Icons.location_on,
-                        size: 44,
-                        color: Colors.redAccent,
+                    if (state.pickedLocation != null)
+                      Marker(
+                        point: state.pickedLocation!,
+                        width: 48,
+                        height: 48,
+                        child: const Icon(
+                          Icons.location_on,
+                          size: 44,
+                          color: Colors.redAccent,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-          if (_locating)
+          if (state.locating)
             const Center(
               child: SizedBox(
                 height: 28,
@@ -231,23 +156,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                 child: IconButton(
                   icon: const Icon(Icons.my_location),
                   tooltip: 'Reubicar',
-                  onPressed: _locating
-                      ? null
-                      : () async {
-                          setState(() => _locating = true);
-                          final pos = await LocationHelper.currentPosition();
-                          if (!mounted) return;
-                          if (pos != null) {
-                            final pt = LatLng(pos.latitude, pos.longitude);
-                            setState(() {
-                              _picked = pt;
-                              _locating = false;
-                            });
-                            _mapController.move(pt, 16);
-                          } else {
-                            setState(() => _locating = false);
-                          }
-                        },
+                  onPressed: state.locating ? null : _relocateFromGps,
                 ),
               ),
             ),
@@ -264,6 +173,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
             snap: true,
             snapSizes: const [0.12, 0.55, 0.92],
             builder: (ctx, scrollController) {
+              final bottomInset = MediaQuery.of(context).viewInsets.bottom;
               return Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
@@ -299,8 +209,10 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                           ),
                         ),
                         Text(
-                          'En ${_picked.latitude.toStringAsFixed(5)}, '
-                          '${_picked.longitude.toStringAsFixed(5)}',
+                          state.pickedLocation == null
+                              ? 'Toca el mapa para fijar el spot'
+                              : 'En ${state.pickedLocation!.latitude.toStringAsFixed(5)}, '
+                                  '${state.pickedLocation!.longitude.toStringAsFixed(5)}',
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -342,8 +254,8 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                           children: SpotType.values.map((t) {
                             return ChoiceChip(
                               label: Text(t.label),
-                              selected: _type == t,
-                              onSelected: (_) => setState(() => _type = t),
+                              selected: state.type == t,
+                              onSelected: (_) => vm.setType(t),
                             );
                           }).toList(),
                         ),
@@ -355,9 +267,8 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                           children: SpotDifficulty.values.map((d) {
                             return ChoiceChip(
                               label: Text(d.label),
-                              selected: _difficulty == d,
-                              onSelected: (_) =>
-                                  setState(() => _difficulty = d),
+                              selected: state.difficulty == d,
+                              onSelected: (_) => vm.setDifficulty(d),
                             );
                           }).toList(),
                         ),
@@ -369,14 +280,8 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                           children: BestTimeSlot.values.map((b) {
                             return FilterChip(
                               label: Text(b.label),
-                              selected: _bestTime.contains(b),
-                              onSelected: (sel) => setState(() {
-                                if (sel) {
-                                  _bestTime.add(b);
-                                } else {
-                                  _bestTime.remove(b);
-                                }
-                              }),
+                              selected: state.bestTime.contains(b),
+                              onSelected: (_) => vm.toggleBestTime(b),
                             );
                           }).toList(),
                         ),
@@ -395,19 +300,16 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                         const SizedBox(height: 12),
                         _SectionLabel('Fotos'),
                         PhotoPickerGrid(
-                          photos: _photos,
-                          onPhotosChanged: (next) =>
-                              setState(() => _photos = next),
+                          photos: state.photos,
+                          onPhotosChanged: vm.setPhotos,
                         ),
                         const SizedBox(height: 16),
                         if (busy)
                           _UploadProgress(
-                            current: _uploadedCount,
-                            total: _photos
-                                .where((p) => p.source == PhotoSource.file)
-                                .length,
+                            current: state.uploadedCount,
+                            total: state.filePhotoCount,
                           ),
-                        if (_state == SubmitState.partialSuccess)
+                        if (state.submitState == SubmitState.partialSuccess)
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -426,13 +328,14 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                                 Expanded(
                                   child: Text(
                                     'Spot creado, pero algunas fotos fallaron:\n'
-                                    '${_errorMessage ?? ''}',
+                                    '${state.errorMessage ?? ''}',
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        if (_state == SubmitState.error)
+                        if (state.submitState == SubmitState.error &&
+                            state.errorMessage != null)
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -445,9 +348,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                                 const Icon(Icons.error_outline, size: 20),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
-                                    _errorMessage ?? 'Error desconocido',
-                                  ),
+                                  child: Text(state.errorMessage!),
                                 ),
                               ],
                             ),
@@ -541,5 +442,3 @@ class _UploadProgress extends StatelessWidget {
     );
   }
 }
-
-enum SubmitState { idle, uploading, partialSuccess, success, error }
