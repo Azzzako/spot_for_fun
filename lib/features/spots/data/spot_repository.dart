@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/providers/supabase_client_provider.dart';
 import '../../../shared/models/enums.dart';
@@ -92,6 +95,81 @@ class SpotRepository {
       'spot_id': spotId,
       'reason': reason,
     });
+  }
+
+  Future<Spot> createSpot({
+    required String name,
+    required String description,
+    required double lat,
+    required double lng,
+    required SpotType type,
+    required SpotDifficulty difficulty,
+    required List<BestTimeSlot> bestTime,
+    String? safetyNotes,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('No hay sesion activa.');
+    }
+    final res = await _client
+        .from('spots')
+        .insert({
+          'author_id': userId,
+          'name': name,
+          'description': description,
+          'lat': lat,
+          'lng': lng,
+          'type': type.dbValue,
+          'difficulty': difficulty.dbValue,
+          'best_time': bestTime.map((t) => t.dbValue).toList(),
+          'safety_notes': safetyNotes,
+          'status': 'pending',
+        })
+        .select('*, spot_photos(*)')
+        .single();
+    return _mapOne(res);
+  }
+
+  Future<String> uploadSpotPhoto({
+    required String spotId,
+    required Uint8List bytes,
+    required String ext,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('No hay sesion activa.');
+    }
+    final filename = '${const Uuid().v4()}.$ext';
+    final path = '$userId/$spotId/$filename';
+
+    await _client.storage
+        .from('spot-photos')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: 'image/$ext'),
+        );
+
+    return _client.storage
+        .from('spot-photos')
+        .getPublicUrl(path);
+  }
+
+  Future<SpotPhoto> attachSpotPhoto({
+    required String spotId,
+    required String url,
+    required int position,
+  }) async {
+    final res = await _client
+        .from('spot_photos')
+        .insert({
+          'spot_id': spotId,
+          'url': url,
+          'position': position,
+        })
+        .select()
+        .single();
+    return SpotPhoto.fromMap(res);
   }
 
   Spot _mapOne(Map<String, dynamic> map) {
