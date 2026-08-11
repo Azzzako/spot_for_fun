@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
-import 'core/config/app_bootstrap.dart';
-import 'core/providers/supabase_client_provider.dart';
-import 'core/providers/theme_mode_pref_provider.dart';
+import 'package:spot_for_fun/ui/core/config/app_bootstrap.dart';
+import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
+import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 
 Future<void> main() async {
   final result = await AppBootstrap.init();

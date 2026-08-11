@@ -4,12 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../core/router/app_router.dart';
-import '../../../shared/models/enums.dart';
-import '../../../shared/utils/location_helper.dart';
-import '../../../shared/widgets/spot_marker.dart';
-import '../../spots/data/spot_repository.dart';
-import 'map_drawer.dart';
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/ui/features/map/views/map_drawer.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});

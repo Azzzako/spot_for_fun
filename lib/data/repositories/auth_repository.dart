@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/providers/supabase_client_provider.dart';
+import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 
 class AuthResult {
   AuthResult({required this.user, required this.needsEmailConfirmation});

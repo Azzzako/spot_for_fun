@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../../../core/router/app_router.dart';
-import '../../../../shared/models/enums.dart';
-import '../../../../shared/utils/location_helper.dart';
-import '../../../../shared/widgets/photo_picker_grid.dart';
-import '../../data/spot_repository.dart';
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
+import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 
 class CreateSpotScreen extends ConsumerStatefulWidget {
   const CreateSpotScreen({super.key});

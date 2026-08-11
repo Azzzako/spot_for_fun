@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/app_router.dart';
-import '../../auth/data/auth_provider.dart';
-import '../../auth/data/auth_repository.dart';
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/repositories/auth_repository.dart';
 
 class MapDrawer extends ConsumerWidget {
   const MapDrawer({super.key, required this.onOpenFilters});

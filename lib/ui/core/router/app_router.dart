@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/admin/presentation/admin_pending_screen.dart';
-import '../../features/auth/data/auth_provider.dart';
-import '../../features/auth/presentation/login_screen.dart';
-import '../../features/auth/presentation/register_screen.dart';
-import '../../features/map/presentation/map_screen.dart';
-import '../../features/profile/presentation/favorites_screen.dart';
-import '../../features/profile/presentation/profile_screen.dart';
-import '../../features/spots/presentation/create/create_spot_screen.dart';
-import '../../features/spots/presentation/detail/spot_detail_screen.dart';
-import '../../features/spots/presentation/myspots/my_spots_screen.dart';
+import 'package:spot_for_fun/ui/features/admin/views/admin_pending_screen.dart';
+import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/ui/features/auth/views/login_screen.dart';
+import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
+import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
+import 'package:spot_for_fun/ui/features/profile/views/favorites_screen.dart';
+import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
+import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
+import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
+import 'package:spot_for_fun/ui/features/spots/views/myspots/my_spots_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 

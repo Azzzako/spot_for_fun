@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../shared/models/enums.dart';
-import '../../../../shared/models/spot.dart';
-import '../../../../shared/models/spot_photo.dart';
-import '../../data/spot_repository.dart';
+import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/data/models/spot.dart';
+import 'package:spot_for_fun/data/models/spot_photo.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 
 final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/providers/theme_mode_pref_provider.dart';
-import 'core/router/app_router.dart';
-import 'core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
 class SpotForFunApp extends ConsumerWidget {
   const SpotForFunApp({super.key});

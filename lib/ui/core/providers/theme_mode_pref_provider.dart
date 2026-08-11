@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_bootstrap.dart';
+import 'package:spot_for_fun/ui/core/config/app_bootstrap.dart';
 
 enum ThemeModePref { system, light, dark }
 

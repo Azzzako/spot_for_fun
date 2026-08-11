@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../shared/models/profile.dart';
-import '../../../shared/models/user_role.dart';
-import '../../../core/providers/supabase_client_provider.dart';
+import 'package:spot_for_fun/data/models/profile.dart';
+import 'package:spot_for_fun/data/models/user_role.dart';
+import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 
 final authStateProvider = StreamProvider<AuthState>((ref) async* {
   final client = ref.watch(supabaseClientProvider);

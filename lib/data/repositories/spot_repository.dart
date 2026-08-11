@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/providers/supabase_client_provider.dart';
-import '../../../shared/models/enums.dart';
-import '../../../shared/models/spot.dart';
-import '../../../shared/models/spot_photo.dart';
+import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
+import 'package:spot_for_fun/data/models/enums.dart';
+import 'package:spot_for_fun/data/models/spot.dart';
+import 'package:spot_for_fun/data/models/spot_photo.dart';
 
 class SpotFilter {
   const SpotFilter({
