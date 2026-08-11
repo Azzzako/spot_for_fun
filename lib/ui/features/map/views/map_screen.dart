@@ -10,6 +10,7 @@ import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/data/services/spot_service.dart';
+import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_drawer.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -21,133 +22,91 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _mapController = MapController();
-  LatLng _currentLocation = LocationHelper.neutralCenter;
-  bool _locating = false;
-  bool _bootstrapped = false;
-  bool _hasRealLocation = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrapLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
-  Future<void> _bootstrapLocation() async {
-    if (_bootstrapped) return;
-    await _locateAndCenter(zoom: 14, showSnackbars: true);
-    if (mounted) _bootstrapped = true;
-  }
-
-  Future<void> _recenter() => _locateAndCenter(zoom: 15, showSnackbars: true);
-
-  Future<void> _locateAndCenter({
-    required double zoom,
-    required bool showSnackbars,
-  }) async {
-    setState(() => _locating = true);
-    final status = await LocationHelper.ensurePermission();
-
+  Future<void> _bootstrap() async {
+    final status = await ref
+        .read(mapViewModelProvider.notifier)
+        .bootstrapLocation();
     if (!mounted) return;
-
-    switch (status) {
-      case LocationStatus.granted:
-        final pos = await LocationHelper.currentPosition();
-        if (!mounted) return;
-        if (pos != null) {
-          _applyLocation(LatLng(pos.latitude, pos.longitude), zoom);
-        } else {
-          setState(() => _locating = false);
-          if (showSnackbars) {
-            _showStatusSnackbar(
-              'No se pudo obtener tu ubicacion',
-              actionLabel: 'Reintentar',
-              onAction: _recenter,
-            );
-          }
-        }
-        break;
-
-      case LocationStatus.serviceOff:
-        setState(() => _locating = false);
-        if (showSnackbars) {
-          _showStatusSnackbar(
-            'Activa tu GPS para mostrar tu ubicacion',
-            actionLabel: 'Configurar',
-            onAction: () async {
-              await LocationHelper.openLocationSettings();
-            },
-          );
-        }
-        break;
-
-      case LocationStatus.denied:
-        setState(() => _locating = false);
-        if (showSnackbars) {
-          _showStatusSnackbar(
-            'Sin permiso de ubicacion',
-            actionLabel: 'Reintentar',
-            onAction: _recenter,
-          );
-        }
-        break;
-
-      case LocationStatus.deniedForever:
-        setState(() => _locating = false);
-        if (showSnackbars) {
-          _showStatusSnackbar(
-            'Permiso de ubicacion bloqueado',
-            actionLabel: 'Abrir ajustes',
-            onAction: () async {
-              await LocationHelper.openAppSettings();
-            },
-            persistent: true,
-          );
-        }
-        break;
-
-      case LocationStatus.error:
-        setState(() => _locating = false);
-        if (showSnackbars) {
-          _showStatusSnackbar(
-            'Error al acceder a la ubicacion',
-            actionLabel: 'Reintentar',
-            onAction: _recenter,
-          );
-        }
-        break;
+    if (status == LocationStatus.granted) {
+      final loc = ref.read(mapViewModelProvider).currentLocation;
+      if (loc != null) _mapController.move(loc, 14);
     }
+    _showSnackForStatus(status);
   }
 
-  void _applyLocation(LatLng latLng, double zoom) {
-    setState(() {
-      _currentLocation = latLng;
-      _locating = false;
-      _hasRealLocation = true;
-    });
-    _mapController.move(latLng, zoom);
+  Future<void> _recenter() async {
+    final status = await ref.read(mapViewModelProvider.notifier).recenter();
+    if (!mounted) return;
+    if (status == LocationStatus.granted) {
+      final loc = ref.read(mapViewModelProvider).currentLocation;
+      if (loc != null) _mapController.move(loc, 15);
+    }
+    _showSnackForStatus(status);
   }
 
-  void _showStatusSnackbar(
-    String message, {
-    required String actionLabel,
-    required VoidCallback onAction,
-    bool persistent = false,
-  }) {
+  void _showSnackForStatus(LocationStatus status) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: persistent
-            ? const Duration(seconds: 8)
-            : const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: actionLabel,
-          onPressed: onAction,
-        ),
-      ),
-    );
+    switch (status) {
+      case LocationStatus.serviceOff:
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Activa tu GPS para mostrar tu ubicacion'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Configurar',
+              onPressed: () => LocationHelper.openLocationSettings(),
+            ),
+          ),
+        );
+        break;
+      case LocationStatus.denied:
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Sin permiso de ubicacion'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Reintentar',
+              onPressed: _recenter,
+            ),
+          ),
+        );
+        break;
+      case LocationStatus.deniedForever:
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Permiso de ubicacion bloqueado'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: 'Abrir ajustes',
+              onPressed: () => LocationHelper.openAppSettings(),
+            ),
+          ),
+        );
+        break;
+      case LocationStatus.error:
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('Error al acceder a la ubicacion'),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Reintentar',
+              onPressed: _recenter,
+            ),
+          ),
+        );
+        break;
+      case LocationStatus.granted:
+        break;
+    }
   }
 
   void openFilters() {
@@ -161,6 +120,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(mapViewModelProvider);
     final spotsAsync = ref.watch(approvedSpotsProvider);
     final brightness = Theme.of(context).brightness;
     final filter = ref.watch(spotFilterProvider);
@@ -172,7 +132,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _currentLocation,
+              initialCenter: state.currentLocation ?? LocationHelper.neutralCenter,
               initialZoom: 13,
               minZoom: 3,
               maxZoom: 19,
@@ -186,9 +146,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
               MarkerLayer(
                 markers: [
-                  if (_hasRealLocation)
+                  if (state.hasRealLocation && state.currentLocation != null)
                     Marker(
-                      point: _currentLocation,
+                      point: state.currentLocation!,
                       width: 32,
                       height: 32,
                       child: Container(
@@ -316,8 +276,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         children: [
           FloatingActionButton.small(
             heroTag: 'recenter',
-            onPressed: _locating ? null : _recenter,
-            child: _locating
+            onPressed: state.locating ? null : _recenter,
+            child: state.locating
                 ? const SizedBox(
                     height: 18,
                     width: 18,
