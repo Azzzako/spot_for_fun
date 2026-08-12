@@ -193,6 +193,7 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
         type: state.type,
         difficulty: state.difficulty,
         bestTime: state.bestTime.toList(),
+        markerKind: state.markerKind,
         safetyNotes: safetyNotes,
       );
 
