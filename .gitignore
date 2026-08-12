@@ -53,3 +53,5 @@ app.*.map.json
 .agents/
 skills-lock.json
 
+# Brand identity reference image (local-only)
+assets/ref/
