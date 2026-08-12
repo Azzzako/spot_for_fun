@@ -18,6 +18,7 @@ class CreateSpotState {
     this.type = SpotType.street,
     this.difficulty = SpotDifficulty.beginner,
     this.bestTime = const {},
+    this.markerKind,
     this.photos = const [],
     this.submitState = SubmitState.idle,
     this.uploadedCount = 0,
@@ -29,6 +30,7 @@ class CreateSpotState {
   final SpotType type;
   final SpotDifficulty difficulty;
   final Set<BestTimeSlot> bestTime;
+  final MarkerKind? markerKind;
   final List<PhotoItem> photos;
   final SubmitState submitState;
   final int uploadedCount;
@@ -43,11 +45,13 @@ class CreateSpotState {
     SpotType? type,
     SpotDifficulty? difficulty,
     Set<BestTimeSlot>? bestTime,
+    MarkerKind? markerKind,
     List<PhotoItem>? photos,
     SubmitState? submitState,
     int? uploadedCount,
     String? errorMessage,
     bool clearErrorMessage = false,
+    bool clearMarkerKind = false,
     bool clearPickedLocation = false,
   }) {
     return CreateSpotState(
@@ -58,6 +62,7 @@ class CreateSpotState {
       type: type ?? this.type,
       difficulty: difficulty ?? this.difficulty,
       bestTime: bestTime ?? this.bestTime,
+      markerKind: clearMarkerKind ? null : (markerKind ?? this.markerKind),
       photos: photos ?? this.photos,
       submitState: submitState ?? this.submitState,
       uploadedCount: uploadedCount ?? this.uploadedCount,
@@ -120,6 +125,13 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
       next.add(slot);
     }
     state = state.copyWith(bestTime: next);
+  }
+
+  void setMarkerKind(MarkerKind? kind) {
+    state = state.copyWith(
+      markerKind: kind,
+      clearMarkerKind: kind == null,
+    );
   }
 
   void setPhotos(List<PhotoItem> photos) {

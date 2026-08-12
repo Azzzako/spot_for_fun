@@ -69,3 +69,23 @@ extension SpotStatusX on SpotStatus {
     );
   }
 }
+
+enum MarkerKind { street, park, bowl, ledge, skateshop }
+
+extension MarkerKindX on MarkerKind {
+  String get dbValue => name;
+  String get label => switch (this) {
+        MarkerKind.street => 'Street',
+        MarkerKind.park => 'Park',
+        MarkerKind.bowl => 'Bowl',
+        MarkerKind.ledge => 'Ledge',
+        MarkerKind.skateshop => 'Skateshop',
+      };
+  static MarkerKind fromDb(Object? raw) {
+    return MarkerKind.values.firstWhere(
+      (e) => e.dbValue == raw,
+      orElse: () => MarkerKind.street,
+    );
+  }
+}
+

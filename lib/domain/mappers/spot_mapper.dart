@@ -27,6 +27,7 @@ extension SpotDtoMapper on SpotDto {
       ratingsCount: ratingsCount,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      markerKind: markerKind,
       photos: photos.map((p) => p.toDomain()).toList(growable: false),
       authorName: authorName,
     );

@@ -20,6 +20,7 @@ class Spot {
     required this.ratingsCount,
     required this.createdAt,
     required this.updatedAt,
+    this.markerKind,
     this.photos = const [],
     this.authorName,
   });
@@ -42,6 +43,7 @@ class Spot {
   final int ratingsCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final MarkerKind? markerKind;
   final List<SpotPhoto> photos;
   final String? authorName;
 
@@ -70,8 +72,10 @@ class Spot {
     int? ratingsCount,
     DateTime? createdAt,
     DateTime? updatedAt,
+    MarkerKind? markerKind,
     List<SpotPhoto>? photos,
     String? authorName,
+    bool clearMarkerKind = false,
   }) {
     return Spot(
       id: id ?? this.id,
@@ -92,6 +96,7 @@ class Spot {
       ratingsCount: ratingsCount ?? this.ratingsCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      markerKind: clearMarkerKind ? null : (markerKind ?? this.markerKind),
       photos: photos ?? this.photos,
       authorName: authorName ?? this.authorName,
     );

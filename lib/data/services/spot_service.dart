@@ -96,6 +96,7 @@ class SpotService {
     required SpotType type,
     required SpotDifficulty difficulty,
     required List<BestTimeSlot> bestTime,
+    MarkerKind? markerKind,
     String? safetyNotes,
   }) async {
     final res = await _client
@@ -109,6 +110,7 @@ class SpotService {
           'type': type.dbValue,
           'difficulty': difficulty.dbValue,
           'best_time': bestTime.map((t) => t.dbValue).toList(),
+          'marker_kind': markerKind?.dbValue,
           'safety_notes': safetyNotes,
           'status': 'pending',
         })

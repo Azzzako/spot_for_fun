@@ -21,6 +21,7 @@ class SpotDto {
     required this.ratingsCount,
     required this.createdAt,
     required this.updatedAt,
+    this.markerKind,
     this.photos = const [],
     this.authorName,
   });
@@ -43,6 +44,7 @@ class SpotDto {
   final int ratingsCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final MarkerKind? markerKind;
 
   final List<SpotPhotoDto> photos;
   final String? authorName;
@@ -72,6 +74,9 @@ class SpotDto {
       ratingsCount: (map['ratings_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
+      markerKind: map['marker_kind'] == null
+          ? null
+          : MarkerKindX.fromDb(map['marker_kind']),
       photos: const [],
       authorName: null,
     );
