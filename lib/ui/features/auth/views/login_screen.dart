@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
+import 'package:spot_for_fun/ui/shared/widgets/brand_wordmark.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -69,12 +70,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 32),
-                    Text(
-                      'Spot For Fun',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    BrandWordmark(
+                      size: 64,
+                      dark: theme.brightness == Brightness.dark,
                     ),
                     const SizedBox(height: 8),
                     Text(

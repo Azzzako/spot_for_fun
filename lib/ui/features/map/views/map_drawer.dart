@@ -86,9 +86,10 @@ class MapDrawer extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Spot For Fun',
+                          'spot for fun',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
                           ),
                         ),
                         const SizedBox(height: 2),
