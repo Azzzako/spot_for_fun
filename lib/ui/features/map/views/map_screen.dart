@@ -140,9 +140,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.spotforfun.app',
                 tileProvider: NetworkTileProvider(),
+              ),
+              CircleLayer(
+                circles: [
+                  if (state.hasRealLocation &&
+                      state.currentLocation != null &&
+                      state.accuracyMeters != null &&
+                      state.accuracyMeters! > 0)
+                    CircleMarker(
+                      point: state.currentLocation!,
+                      radius: state.accuracyMeters!,
+                      useRadiusInMeter: true,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.12),
+                      borderStrokeWidth: 1,
+                      borderColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.35),
+                    ),
+                ],
               ),
               MarkerLayer(
                 markers: [

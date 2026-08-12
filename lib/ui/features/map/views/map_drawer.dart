@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 
 class MapDrawer extends ConsumerWidget {
   const MapDrawer({super.key, required this.onOpenFilters});
@@ -43,6 +44,7 @@ class MapDrawer extends ConsumerWidget {
     if (confirm != true || !context.mounted) return;
 
     Navigator.of(context).pop();
+    await ref.read(mapViewModelProvider.notifier).stopTracking();
     await ref.read(authRepositoryProvider).signOut();
     if (!context.mounted) return;
     context.go(AppRoutes.login);

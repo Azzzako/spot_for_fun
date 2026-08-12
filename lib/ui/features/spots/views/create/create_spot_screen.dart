@@ -69,8 +69,12 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     if (!mounted) return;
     final after = ref.read(createSpotViewModelProvider).submitState;
     if (after == SubmitState.success && previous != SubmitState.success) {
-      _snack('Tu spot esta en revision');
-      context.go(AppRoutes.mySpots);
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(AppRoutes.map);
+      }
+      _showSuccessSnack();
     } else if (after == SubmitState.error && ref.read(createSpotViewModelProvider).errorMessage != null) {
       _snack(ref.read(createSpotViewModelProvider).errorMessage!);
     }
@@ -80,6 +84,34 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showSuccessSnack() {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Tu spot está en revisión',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(
+          label: 'Ver mis spots',
+          onPressed: () => context.go(AppRoutes.mySpots),
+        ),
+      ),
+    );
   }
 
   @override
@@ -114,7 +146,8 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.spotforfun.app',
                   tileProvider: NetworkTileProvider(),
                 ),
