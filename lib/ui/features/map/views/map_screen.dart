@@ -163,7 +163,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ...spotsAsync.when(
                     data: (spots) => spots.map((s) {
-                      final kind = classifySpotKind(s.type.dbValue);
+                      final kind = resolveSpotKind(s);
                       return Marker(
                         point: LatLng(s.lat, s.lng),
                         width: 48,

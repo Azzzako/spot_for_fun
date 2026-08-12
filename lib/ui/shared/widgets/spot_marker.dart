@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-enum SpotKind { street, park, bowl, plaza, diy }
+import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/domain/models/spot.dart';
+
+enum SpotKind { street, park, bowl, plaza, diy, ledge, skateshop }
 
 SpotKind classifySpotKind(String type) {
   return switch (type) {
@@ -12,6 +15,20 @@ SpotKind classifySpotKind(String type) {
   };
 }
 
+SpotKind resolveSpotKind(Spot spot) {
+  final mk = spot.markerKind;
+  if (mk != null) {
+    return switch (mk) {
+      MarkerKind.street => SpotKind.street,
+      MarkerKind.park => SpotKind.park,
+      MarkerKind.bowl => SpotKind.bowl,
+      MarkerKind.ledge => SpotKind.ledge,
+      MarkerKind.skateshop => SpotKind.skateshop,
+    };
+  }
+  return classifySpotKind(spot.type.dbValue);
+}
+
 IconData spotIconFor(SpotKind kind) {
   return switch (kind) {
     SpotKind.street => Icons.location_on,
@@ -19,6 +36,8 @@ IconData spotIconFor(SpotKind kind) {
     SpotKind.bowl => Icons.stadium,
     SpotKind.plaza => Icons.square,
     SpotKind.diy => Icons.handyman,
+    SpotKind.ledge => Icons.view_week,
+    SpotKind.skateshop => Icons.storefront,
   };
 }
 
@@ -30,6 +49,8 @@ Color spotColorFor(SpotKind kind, Brightness brightness) {
     SpotKind.bowl => isDark ? const Color(0xFFF472B6) : const Color(0xFFDB2777),
     SpotKind.plaza => isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
     SpotKind.diy => isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+    SpotKind.ledge => isDark ? const Color(0xFF22D3EE) : const Color(0xFF0E7490),
+    SpotKind.skateshop => isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
   };
 }
 
@@ -54,4 +75,16 @@ Widget spotMarkerWidget({
     ),
     child: Icon(icon, color: Colors.white, size: 22),
   );
+}
+
+MarkerKind? markerKindForSpotKind(SpotKind kind) {
+  return switch (kind) {
+    SpotKind.street => MarkerKind.street,
+    SpotKind.park => MarkerKind.park,
+    SpotKind.bowl => MarkerKind.bowl,
+    SpotKind.plaza => null,
+    SpotKind.diy => null,
+    SpotKind.ledge => MarkerKind.ledge,
+    SpotKind.skateshop => MarkerKind.skateshop,
+  };
 }
