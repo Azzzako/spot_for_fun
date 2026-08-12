@@ -36,7 +36,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     if (status == LocationStatus.granted) {
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 14);
+      if (loc != null) _mapController.move(loc, 17);
     }
     _showSnackForStatus(status);
   }
@@ -46,7 +46,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     if (status == LocationStatus.granted) {
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 15);
+      if (loc != null) _mapController.move(loc, 18);
     }
     _showSnackForStatus(status);
   }
@@ -133,7 +133,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: state.currentLocation ?? LocationHelper.neutralCenter,
-              initialZoom: 13,
+              initialZoom: 16,
               minZoom: 3,
               maxZoom: 19,
             ),
