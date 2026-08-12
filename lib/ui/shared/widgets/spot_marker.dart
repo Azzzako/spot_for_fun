@@ -88,3 +88,16 @@ MarkerKind? markerKindForSpotKind(SpotKind kind) {
     SpotKind.skateshop => MarkerKind.skateshop,
   };
 }
+
+SpotKind spotKindForMarkerKind(MarkerKind kind) {
+  return switch (kind) {
+    MarkerKind.street => SpotKind.street,
+    MarkerKind.park => SpotKind.park,
+    MarkerKind.bowl => SpotKind.bowl,
+    MarkerKind.ledge => SpotKind.ledge,
+    MarkerKind.skateshop => SpotKind.skateshop,
+  };
+}
+
+IconData spotIconForMarkerKind(MarkerKind kind) =>
+    spotIconFor(spotKindForMarkerKind(kind));

@@ -7,6 +7,7 @@ import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/create_spot_view_model.dart';
 
 class CreateSpotScreen extends ConsumerStatefulWidget {
@@ -285,6 +286,62 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                             );
                           }).toList(),
                         ),
+                        const SizedBox(height: 16),
+                        _SectionLabel('Estilo del marker (opcional)'),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: MarkerKind.values.map((mk) {
+                            final selected = state.markerKind == mk;
+                            return InkWell(
+                              onTap: () => vm.setMarkerKind(
+                                selected ? null : mk,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 120),
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: spotColorFor(
+                                    spotKindForMarkerKind(mk),
+                                    theme.brightness,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: selected
+                                        ? theme.colorScheme.onSurface
+                                        : Colors.white,
+                                    width: selected ? 3 : 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  spotIconForMarkerKind(mk),
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (state.markerKind == null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Sin seleccion: usa el icono del tipo de spot.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 16),
                         _SectionLabel('Notas de seguridad (opcional)'),
                         TextFormField(
