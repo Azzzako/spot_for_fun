@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_up_view_model.dart';
-import 'package:spot_for_fun/ui/shared/widgets/brand_wordmark.dart';
+import 'package:spot_for_fun/ui/shared/widgets/brand_logo.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -95,12 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 16),
-                    Center(
-                      child: BrandWordmark(
-                        size: 48,
-                        dark: theme.brightness == Brightness.dark,
-                      ),
-                    ),
+                    const Center(child: BrandLogo(size: 96)),
                     const SizedBox(height: 16),
                     Text(
                       'Únete a la comunidad',
