@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
+import 'package:spot_for_fun/ui/shared/widgets/brand_logo.dart';
 
 class MapDrawer extends ConsumerWidget {
   const MapDrawer({super.key, required this.onOpenFilters});
@@ -65,43 +66,15 @@ class MapDrawer extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.skateboarding,
-                      color: theme.colorScheme.onPrimary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'spot for fun',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          username == null
-                              ? 'Bienvenido'
-                              : 'Hola, @$username',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                  const BrandLogo(size: 96),
+                  const SizedBox(height: 12),
+                  Text(
+                    username == null ? 'Bienvenido' : 'Hola, @$username',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
