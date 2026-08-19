@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
-import 'package:spot_for_fun/ui/features/map/views/map_drawer.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -126,7 +123,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final filter = ref.watch(spotFilterProvider);
 
     return Scaffold(
-      drawer: MapDrawer(onOpenFilters: openFilters),
       body: Stack(
         children: [
           FlutterMap(
@@ -184,15 +180,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           Positioned(
             top: MediaQuery.of(context).padding.top + 12,
             left: 12,
-            child: Builder(
-              builder: (ctx) => Material(
-                color: Theme.of(context).colorScheme.surface,
-                shape: const CircleBorder(),
-                elevation: 2,
-                child: IconButton(
-                  tooltip: 'Menu',
-                  icon: const Icon(Icons.menu),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: Builder(
+                builder: (ctx) => IconButton(
+                  tooltip: 'Filtros',
+                  icon: const Icon(Icons.filter_alt_outlined),
+                  onPressed: () => openFilters(),
                 ),
               ),
             ),
@@ -267,28 +263,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'recenter',
-            onPressed: state.locating ? null : _recenter,
-            child: state.locating
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.my_location),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton(
-            heroTag: 'create',
-            onPressed: () => context.push(AppRoutes.spotCreate),
-            child: const Icon(Icons.add_location_alt_outlined),
-          ),
-        ],
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 88),
+        child: FloatingActionButton.small(
+          heroTag: 'recenter',
+          onPressed: state.locating ? null : _recenter,
+          child: state.locating
+              ? const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.my_location),
+        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

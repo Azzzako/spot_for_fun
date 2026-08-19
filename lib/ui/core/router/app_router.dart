@@ -9,11 +9,16 @@ import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/favorites_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
+import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
 import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/myspots/my_spots_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _mapaNavigatorKey = GlobalKey<NavigatorState>();
+final _myspotsNavigatorKey = GlobalKey<NavigatorState>();
+final _favoritesNavigatorKey = GlobalKey<NavigatorState>();
+final _perfilNavigatorKey = GlobalKey<NavigatorState>();
 
 class AppRoutes {
   AppRoutes._();
@@ -47,41 +52,72 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: AppRoutes.map,
-        builder: (_, _) => const MapScreen(),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            navigatorKey: _mapaNavigatorKey,
+            routes: [
+              GoRoute(
+                path: AppRoutes.map,
+                builder: (_, _) => const MapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _myspotsNavigatorKey,
+            routes: [
+              GoRoute(
+                path: AppRoutes.mySpots,
+                builder: (_, _) => const MySpotsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _favoritesNavigatorKey,
+            routes: [
+              GoRoute(
+                path: AppRoutes.favorites,
+                builder: (_, _) => const FavoritesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _perfilNavigatorKey,
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (_, _) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.login,
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.register,
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const RegisterScreen(),
       ),
       GoRoute(
         path: AppRoutes.spotCreate,
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CreateSpotScreen(),
       ),
       GoRoute(
-        path: AppRoutes.mySpots,
-        builder: (_, _) => const MySpotsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.profile,
-        builder: (_, _) => const ProfileScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.favorites,
-        builder: (_, _) => const FavoritesScreen(),
-      ),
-      GoRoute(
         path: '/spots/:id',
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (_, st) =>
             SpotDetailScreen(spotId: st.pathParameters['id']!),
       ),
       GoRoute(
         path: AppRoutes.adminPending,
+        parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AdminPendingScreen(),
       ),
     ],
