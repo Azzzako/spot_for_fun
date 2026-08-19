@@ -11,6 +11,7 @@ SpotKind classifySpotKind(String type) {
     'bowl' => SpotKind.bowl,
     'plaza' => SpotKind.plaza,
     'diy' => SpotKind.diy,
+    'skateshop' => SpotKind.skateshop,
     _ => SpotKind.street,
   };
 }

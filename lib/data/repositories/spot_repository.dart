@@ -44,7 +44,6 @@ class SpotRepository {
     required SpotType type,
     required SpotDifficulty difficulty,
     required List<BestTimeSlot> bestTime,
-    MarkerKind? markerKind,
     String? safetyNotes,
   }) async {
     final dto = await _service.createSpot(
@@ -56,7 +55,6 @@ class SpotRepository {
       type: type,
       difficulty: difficulty,
       bestTime: bestTime,
-      markerKind: markerKind,
       safetyNotes: safetyNotes,
     );
     return dto.toDomain();
