@@ -1,4 +1,4 @@
-enum SpotType { street, park, bowl, plaza, diy }
+enum SpotType { street, park, bowl, plaza, diy, skateshop }
 
 extension SpotTypeX on SpotType {
   String get dbValue => name;
@@ -8,6 +8,7 @@ extension SpotTypeX on SpotType {
         SpotType.bowl => 'Bowl',
         SpotType.plaza => 'Plaza',
         SpotType.diy => 'DIY',
+        SpotType.skateshop => 'Skateshop',
       };
   static SpotType fromDb(Object? raw) {
     return SpotType.values.firstWhere(
