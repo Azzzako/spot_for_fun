@@ -66,18 +66,6 @@ class LocationHelper {
     return pos == null ? neutralCenter : LatLng(pos.latitude, pos.longitude);
   }
 
-  static Stream<Position> positionStream({
-    int distanceFilter = 10,
-    LocationAccuracy accuracy = LocationAccuracy.high,
-  }) {
-    return Geolocator.getPositionStream(
-      locationSettings: LocationSettings(
-        accuracy: accuracy,
-        distanceFilter: distanceFilter,
-      ),
-    );
-  }
-
   static Future<bool> openAppSettings() async {
     try {
       return await Geolocator.openAppSettings();

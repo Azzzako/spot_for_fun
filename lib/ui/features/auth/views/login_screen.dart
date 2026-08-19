@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
-import 'package:spot_for_fun/ui/shared/widgets/brand_logo.dart';
+
+const Color _kBrand = Color(0xFF8FA661);
+const Color _kInputFill = Color(0x1AFFFFFF);
+const Color _kInputBorder = Color(0x3DFFFFFF);
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -47,7 +50,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(signInViewModelProvider);
     final loading = state.status == AuthFormStatus.loading;
-    final theme = Theme.of(context);
 
     ref.listen(signInViewModelProvider, (prev, next) {
       if (next.status == AuthFormStatus.error &&
@@ -58,135 +60,367 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/identity/login_bg.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.centerLeft,
-            ),
+          Image.asset(
+            'assets/identity/background.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.45),
-                    Colors.black.withValues(alpha: 0.15),
-                    Colors.black.withValues(alpha: 0.65),
-                    Colors.black.withValues(alpha: 0.85),
-                  ],
-                  stops: const [0.0, 0.4, 0.8, 1.0],
-                ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x00000000),
+                  Color(0x4D000000),
+                  Color(0xA6000000),
+                ],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
           ),
           SafeArea(
             child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        const Center(child: BrandLogo(size: 160)),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          style: TextStyle(color: theme.colorScheme.onSurface),
-                          decoration: const InputDecoration(
-                            labelText: 'Correo',
-                            prefixIcon: Icon(Icons.alternate_email),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) {
-                              return 'Requerido';
-                            }
-                            if (!v.contains('@')) return 'Correo inválido';
-                            return null;
-                          },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
                         ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _passCtrl,
-                          obscureText: true,
-                          autofillHints: const [AutofillHints.password],
-                          style: TextStyle(color: theme.colorScheme.onSurface),
-                          decoration: const InputDecoration(
-                            labelText: 'Contraseña',
-                            prefixIcon: Icon(Icons.lock_outline),
-                          ),
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Requerido';
-                            if (v.length < 6) return 'Mínimo 6 caracteres';
-                            return null;
-                          },
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: loading ? null : _submit,
-                          child: loading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Entrar'),
-                        ),
-                        const SizedBox(height: 12),
-                        const Row(
-                          children: [
-                            Expanded(child: Divider()),
-                            Padding(
-                              padding:
-                                  EdgeInsets.symmetric(horizontal: 12),
-                              child: Text('o'),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Image.asset(
+                                  'assets/identity/logo.png',
+                                  height: 104,
+                                  fit: BoxFit.contain,
+                                ),
+                                const SizedBox(height: 12),
+                               
+                                const SizedBox(height: 24),
+                                _EmailField(
+                                  controller: _emailCtrl,
+                                  compact: true,
+                                ),
+                                const SizedBox(height: 10),
+                                _PasswordField(
+                                  controller: _passCtrl,
+                                  onSubmitted: (_) => _submit(),
+                                  compact: true,
+                                ),
+                                const SizedBox(height: 18),
+                                _PrimaryButton(
+                                  label: 'Entrar',
+                                  loading: loading,
+                                  onPressed: _submit,
+                                  compact: true,
+                                ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child:
+                                          Divider(color: _kInputBorder),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      child: Text(
+                                        'o',
+                                        style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.5),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    const Expanded(
+                                      child:
+                                          Divider(color: _kInputBorder),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                _SocialOutlineButton(
+                                  icon: Icons.g_mobiledata_rounded,
+                                  label: 'Continuar con Google',
+                                  enabled: !loading,
+                                  onPressed: _submit,
+                                  compact: true,
+                                ),
+                                const SizedBox(height: 8),
+                                _SocialOutlineButton(
+                                  icon: Icons.apple,
+                                  label: 'Continuar con Apple (próximamente)',
+                                  enabled: false,
+                                  onPressed: null,
+                                  compact: true,
+                                ),
+                                const SizedBox(height: 12),
+                                Center(
+                                  child: TextButton(
+                                    onPressed: loading
+                                        ? null
+                                        : () =>
+                                            context.push(AppRoutes.register),
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13.5,
+                                        ),
+                                        children: [
+                                          const TextSpan(
+                                            text: '¿No tienes cuenta? ',
+                                          ),
+                                          TextSpan(
+                                            text: 'Crear una',
+                                            style: TextStyle(
+                                              color: _kBrand,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Expanded(child: Divider()),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: loading ? null : _submit,
-                          icon: const Icon(Icons.g_mobiledata, size: 28),
-                          label: const Text('Continuar con Google'),
-                        ),
-                        const SizedBox(height: 8),
-                        OutlinedButton.icon(
-                          // TODO: Apple Sign-In — habilitar cuando se configure la Apple Developer account.
-                          onPressed: null,
-                          icon: const Icon(Icons.apple, size: 22),
-                          label: const Text(
-                            'Continuar con Apple (próximamente)',
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        TextButton(
-                          onPressed: loading
-                              ? null
-                              : () => context.push(AppRoutes.register),
-                          child: const Text('¿No tienes cuenta? Crear una'),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmailField extends StatelessWidget {
+  const _EmailField({required this.controller, this.compact = false});
+  final TextEditingController controller;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.emailAddress,
+      autofillHints: const [AutofillHints.email],
+      style: const TextStyle(color: Colors.white),
+      cursorColor: _kBrand,
+      decoration: _inputDecoration(
+        label: 'Correo',
+        icon: Icons.alternate_email,
+        compact: compact,
+      ),
+      validator: (v) {
+        if (v == null || v.trim().isEmpty) return 'Requerido';
+        if (!v.contains('@')) return 'Correo inválido';
+        return null;
+      },
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  const _PasswordField({
+    required this.controller,
+    required this.onSubmitted,
+    this.compact = false,
+  });
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      obscureText: true,
+      autofillHints: const [AutofillHints.password],
+      style: const TextStyle(color: Colors.white),
+      cursorColor: _kBrand,
+      onFieldSubmitted: onSubmitted,
+      decoration: _inputDecoration(
+        label: 'Contraseña',
+        icon: Icons.lock_outline,
+        compact: compact,
+      ),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Requerido';
+        if (v.length < 6) return 'Mínimo 6 caracteres';
+        return null;
+      },
+    );
+  }
+}
+
+InputDecoration _inputDecoration({
+  required String label,
+  required IconData icon,
+  bool compact = false,
+}) {
+  const labelStyle = TextStyle(color: Colors.white70);
+  return InputDecoration(
+    labelText: label,
+    labelStyle: labelStyle,
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelStyle: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+    ),
+    prefixIcon: Icon(icon, color: Colors.white60),
+    filled: true,
+    fillColor: _kInputFill,
+    contentPadding: EdgeInsets.symmetric(
+      horizontal: 16,
+      vertical: compact ? 14 : 18,
+    ),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: _kInputBorder),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: _kInputBorder),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: _kBrand, width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.6),
+    ),
+    errorStyle: const TextStyle(color: Color(0xFFFF7A7A)),
+  );
+}
+
+class _PrimaryButton extends StatelessWidget {
+  const _PrimaryButton({
+    required this.label,
+    required this.loading,
+    required this.onPressed,
+    this.compact = false,
+  });
+  final String label;
+  final bool loading;
+  final VoidCallback onPressed;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: compact ? 46 : 52,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: _kBrand,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _kBrand.withValues(alpha: 0.55),
+          disabledForegroundColor: Colors.white70,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: loading ? null : onPressed,
+        child: loading
+            ? SizedBox(
+                height: compact ? 18 : 22,
+                width: compact ? 18 : 22,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                label,
+                style: TextStyle(
+                  fontSize: compact ? 15 : 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _SocialOutlineButton extends StatelessWidget {
+  const _SocialOutlineButton({
+    required this.icon,
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+    this.compact = false,
+  });
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback? onPressed;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = Colors.white.withValues(alpha: 0.55);
+    final textColor = enabled ? Colors.white : Colors.white38;
+    final iconColor = enabled ? Colors.white : Colors.white38;
+    return SizedBox(
+      height: compact ? 44 : 52,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: textColor,
+          side: BorderSide(
+            color: borderColor,
+            width: 1.2,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 12 : 16,
+            vertical: compact ? 8 : 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: compact ? 20 : 22, color: iconColor),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: compact ? 14 : 15,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
       ),
     );
   }
