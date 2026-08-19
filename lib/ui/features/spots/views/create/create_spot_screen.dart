@@ -43,7 +43,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
         .read(createSpotViewModelProvider.notifier)
         .initLocation();
     if (!mounted || loc == null) return;
-    _mapController.move(loc, 17);
+    _mapController.move(loc, 15.5);
   }
 
   Future<void> _relocateFromGps() async {
@@ -51,7 +51,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
         .read(createSpotViewModelProvider.notifier)
         .relocateFromGps();
     if (!mounted || loc == null) return;
-    _mapController.move(loc, 18);
+    _mapController.move(loc, 16.5);
   }
 
   Future<void> _submit() async {
@@ -104,7 +104,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: state.pickedLocation ?? LocationHelper.neutralCenter,
-                initialZoom: 17,
+                initialZoom: 15.5,
                 onTap: (_, point) {
                   vm.setPickedLocation(point);
                   _mapController.move(point, _mapController.camera.zoom);
@@ -122,11 +122,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                     if (state.pickedLocation != null)
                       Marker(
                         point: state.pickedLocation!,
-                        width: 48,
-                        height: 48,
+                        width: 32,
+                        height: 32,
                         child: const Icon(
                           Icons.location_on,
-                          size: 44,
+                          size: 30,
                           color: Colors.redAccent,
                         ),
                       ),

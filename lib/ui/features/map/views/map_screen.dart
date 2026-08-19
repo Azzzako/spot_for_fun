@@ -36,7 +36,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     if (status == LocationStatus.granted) {
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 17);
+      if (loc != null) _mapController.move(loc, 15.5);
     }
     _showSnackForStatus(status);
   }
@@ -46,7 +46,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     if (status == LocationStatus.granted) {
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 18);
+      if (loc != null) _mapController.move(loc, 16.5);
     }
     _showSnackForStatus(status);
   }
@@ -133,7 +133,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter: state.currentLocation ?? LocationHelper.neutralCenter,
-              initialZoom: 16,
+              initialZoom: 14.5,
               minZoom: 3,
               maxZoom: 19,
             ),
@@ -166,15 +166,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       final kind = resolveSpotKind(s);
                       return Marker(
                         point: LatLng(s.lat, s.lng),
-                        width: 48,
-                        height: 48,
-                        child: GestureDetector(
-                          onTap: () =>
-                              context.push(AppRoutes.spotDetail(s.id)),
-                          child: spotMarkerWidget(
-                            color: spotColorFor(kind, brightness),
-                            icon: spotIconFor(kind),
-                          ),
+                        width: 32,
+                        height: 32,
+                        child: spotMarkerWidget(
+                          color: spotColorFor(kind, brightness),
+                          icon: spotIconFor(kind),
                         ),
                       );
                     }).toList(),

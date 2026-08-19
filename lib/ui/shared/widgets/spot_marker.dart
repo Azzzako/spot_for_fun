@@ -60,21 +60,21 @@ Widget spotMarkerWidget({
   required IconData icon,
 }) {
   return Container(
-    width: 44,
-    height: 44,
+    width: 32,
+    height: 32,
     decoration: BoxDecoration(
       color: color,
       shape: BoxShape.circle,
-      border: Border.all(color: Colors.white, width: 3),
+      border: Border.all(color: Colors.white, width: 2),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.25),
-          blurRadius: 6,
+          blurRadius: 4,
           offset: const Offset(0, 2),
         ),
       ],
     ),
-    child: Icon(icon, color: Colors.white, size: 22),
+    child: Icon(icon, color: Colors.white, size: 14),
   );
 }
 

@@ -41,12 +41,12 @@ class MapViewModel extends Notifier<MapViewState> {
 
   Future<LocationStatus> bootstrapLocation() async {
     if (state.bootstrapped) return LocationStatus.granted;
-    final status = await locateAndCenter(zoom: 14);
+    final status = await locateAndCenter(zoom: 12.5);
     state = state.copyWith(bootstrapped: true);
     return status;
   }
 
-  Future<LocationStatus> recenter() => locateAndCenter(zoom: 15);
+  Future<LocationStatus> recenter() => locateAndCenter(zoom: 13.5);
 
   Future<LocationStatus> locateAndCenter({required double zoom}) async {
     state = state.copyWith(locating: true);
