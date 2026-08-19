@@ -5,6 +5,8 @@ import 'package:spot_for_fun/domain/models/spot.dart';
 
 enum SpotKind { street, park, bowl, plaza, diy, ledge, skateshop }
 
+enum SpotMarkerShape { circle, roundedSquare, stadium }
+
 SpotKind classifySpotKind(String type) {
   return switch (type) {
     'park' => SpotKind.park,
@@ -28,6 +30,18 @@ SpotKind resolveSpotKind(Spot spot) {
     };
   }
   return classifySpotKind(spot.type.dbValue);
+}
+
+SpotMarkerShape shapeForSpotKind(SpotKind kind) {
+  return switch (kind) {
+    SpotKind.street => SpotMarkerShape.circle,
+    SpotKind.park => SpotMarkerShape.roundedSquare,
+    SpotKind.bowl => SpotMarkerShape.circle,
+    SpotKind.plaza => SpotMarkerShape.roundedSquare,
+    SpotKind.diy => SpotMarkerShape.circle,
+    SpotKind.ledge => SpotMarkerShape.stadium,
+    SpotKind.skateshop => SpotMarkerShape.roundedSquare,
+  };
 }
 
 IconData spotIconFor(SpotKind kind) {
@@ -55,16 +69,24 @@ Color spotColorFor(SpotKind kind, Brightness brightness) {
   };
 }
 
+BorderRadius _radiusFor(SpotMarkerShape shape) {
+  return switch (shape) {
+    SpotMarkerShape.circle => BorderRadius.circular(16),
+    SpotMarkerShape.roundedSquare => BorderRadius.circular(6),
+    SpotMarkerShape.stadium => BorderRadius.circular(16),
+  };
+}
+
 Widget spotMarkerWidget({
-  required Color color,
-  required IconData icon,
+  required SpotKind kind,
+  required Brightness brightness,
 }) {
   return Container(
     width: 32,
     height: 32,
     decoration: BoxDecoration(
-      color: color,
-      shape: BoxShape.circle,
+      color: spotColorFor(kind, brightness),
+      borderRadius: _radiusFor(shapeForSpotKind(kind)),
       border: Border.all(color: Colors.white, width: 2),
       boxShadow: [
         BoxShadow(
@@ -74,31 +96,10 @@ Widget spotMarkerWidget({
         ),
       ],
     ),
-    child: Icon(icon, color: Colors.white, size: 14),
+    child: Icon(
+      spotIconFor(kind),
+      color: Colors.white,
+      size: kind == SpotKind.ledge ? 18 : 14,
+    ),
   );
 }
-
-MarkerKind? markerKindForSpotKind(SpotKind kind) {
-  return switch (kind) {
-    SpotKind.street => MarkerKind.street,
-    SpotKind.park => MarkerKind.park,
-    SpotKind.bowl => MarkerKind.bowl,
-    SpotKind.plaza => null,
-    SpotKind.diy => null,
-    SpotKind.ledge => MarkerKind.ledge,
-    SpotKind.skateshop => MarkerKind.skateshop,
-  };
-}
-
-SpotKind spotKindForMarkerKind(MarkerKind kind) {
-  return switch (kind) {
-    MarkerKind.street => SpotKind.street,
-    MarkerKind.park => SpotKind.park,
-    MarkerKind.bowl => SpotKind.bowl,
-    MarkerKind.ledge => SpotKind.ledge,
-    MarkerKind.skateshop => SpotKind.skateshop,
-  };
-}
-
-IconData spotIconForMarkerKind(MarkerKind kind) =>
-    spotIconFor(spotKindForMarkerKind(kind));

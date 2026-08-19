@@ -169,8 +169,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         width: 32,
                         height: 32,
                         child: spotMarkerWidget(
-                          color: spotColorFor(kind, brightness),
-                          icon: spotIconFor(kind),
+                          kind: kind,
+                          brightness: brightness,
                         ),
                       );
                     }).toList(),
