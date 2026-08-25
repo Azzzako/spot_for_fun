@@ -3,7 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 
-enum SpotKind { street, park, bowl, plaza, diy, ledge, skateshop }
+enum SpotKind {
+  street,
+  park,
+  bowl,
+  plaza,
+  diy,
+  ledge,
+  skateshop,
+  skatepark,
+  gap,
+}
 
 enum SpotMarkerShape { circle, roundedSquare, stadium }
 
@@ -14,6 +24,8 @@ SpotKind classifySpotKind(String type) {
     'plaza' => SpotKind.plaza,
     'diy' => SpotKind.diy,
     'skateshop' => SpotKind.skateshop,
+    'skatepark' => SpotKind.skatepark,
+    'gap' => SpotKind.gap,
     _ => SpotKind.street,
   };
 }
@@ -41,6 +53,8 @@ SpotMarkerShape shapeForSpotKind(SpotKind kind) {
     SpotKind.diy => SpotMarkerShape.circle,
     SpotKind.ledge => SpotMarkerShape.stadium,
     SpotKind.skateshop => SpotMarkerShape.roundedSquare,
+    SpotKind.skatepark => SpotMarkerShape.roundedSquare,
+    SpotKind.gap => SpotMarkerShape.stadium,
   };
 }
 
@@ -53,6 +67,8 @@ IconData spotIconFor(SpotKind kind) {
     SpotKind.diy => Icons.handyman,
     SpotKind.ledge => Icons.view_week,
     SpotKind.skateshop => Icons.storefront,
+    SpotKind.skatepark => Icons.park,
+    SpotKind.gap => Icons.swap_horiz,
   };
 }
 
@@ -66,6 +82,8 @@ Color spotColorFor(SpotKind kind, Brightness brightness) {
     SpotKind.diy => isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
     SpotKind.ledge => isDark ? const Color(0xFF22D3EE) : const Color(0xFF0E7490),
     SpotKind.skateshop => isDark ? const Color(0xFF34D399) : const Color(0xFF047857),
+    SpotKind.skatepark => isDark ? const Color(0xFFA3E635) : const Color(0xFF65A30D),
+    SpotKind.gap => isDark ? const Color(0xFFFB923C) : const Color(0xFFC2410C),
   };
 }
 
