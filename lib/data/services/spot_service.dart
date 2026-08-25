@@ -87,6 +87,18 @@ class SpotService {
         .toList(growable: false);
   }
 
+  Future<List<SpotDto>> fetchByAuthor(String authorId) async {
+    final res = await _client
+        .from('spots')
+        .select('*, spot_photos(*)')
+        .eq('author_id', authorId)
+        .order('created_at', ascending: false);
+    return (res as List)
+        .cast<Map<String, dynamic>>()
+        .map(_spotDtoFromRow)
+        .toList(growable: false);
+  }
+
   Future<SpotDto> createSpot({
     required String authorId,
     required String name,

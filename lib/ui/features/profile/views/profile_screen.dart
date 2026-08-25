@@ -6,16 +6,12 @@ import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/features/profile/widgets/profile_mock_data.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
-
-  static const _tabs = [
-    _TabSpec(label: 'Mis Spots', spots: kMockMySpots),
-    _TabSpec(label: 'Favoritos', spots: kMockFavoriteSpots),
-    _TabSpec(label: 'Resenas', spots: []),
-  ];
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
@@ -46,14 +42,33 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(themeModePrefProvider);
-    final profile = MockProfile.current;
+    final profileAsync = ref.watch(currentProfileProvider);
+    final mySpotsAsync = ref.watch(mySpotsProvider);
     final brightness = Theme.of(context).brightness;
     final background = brightness == Brightness.dark
         ? Theme.of(context).colorScheme.surface
         : AppColors.brandCream;
 
+    final profile = profileAsync.valueOrNull;
+    final mySpots = mySpotsAsync.valueOrNull ?? const <Spot>[];
+    final header = profile == null
+        ? ProfileHeader(
+            username: 'Cargando...',
+            userId: 'guest',
+            spotsCount: 0,
+            favoritesCount: 0,
+            reviewsCount: 0,
+          )
+        : ProfileHeader(
+            username: profile.username,
+            userId: profile.id,
+            spotsCount: mySpots.length,
+            favoritesCount: 0,
+            reviewsCount: 0,
+          );
+
     return DefaultTabController(
-      length: _tabs.length,
+      length: 3,
       child: Scaffold(
         backgroundColor: background,
         appBar: AppBar(
@@ -61,10 +76,12 @@ class ProfileScreen extends ConsumerWidget {
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
+          leading: profile == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
           actions: [
             IconButton(
               tooltip: 'Notificaciones',
@@ -139,32 +156,53 @@ class ProfileScreen extends ConsumerWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
                 ),
-                tabs: _tabs
-                    .map((t) => Tab(text: t.label))
-                    .toList(growable: false),
+                tabs: const [
+                  Tab(text: 'Mis Spots'),
+                  Tab(text: 'Favoritos'),
+                  Tab(text: 'Resenas'),
+                ],
               ),
             ),
           ),
         ),
-        body: Column(
-          children: [
-            ProfileHeader(profile: profile),
-            Expanded(
-              child: TabBarView(
+        body: profile == null
+            ? Center(
+                child: profileAsync.isLoading
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              size: 48, color: Colors.redAccent),
+                          const SizedBox(height: 12),
+                          const Text('No se pudo cargar tu perfil'),
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: () =>
+                                ref.invalidate(currentProfileProvider),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+              )
+            : Column(
                 children: [
-                  _SpotListTab(spots: _tabs[0].spots),
-                  _SpotListTab(spots: _tabs[1].spots),
-                  const _EmptyTab(
-                    icon: Icons.rate_review_outlined,
-                    title: 'Aun no tienes resenas',
-                    subtitle:
-                        'Cuando califiques un spot aparecera aqui.',
+                  header,
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _MySpotsTab(
+                          asyncSpots: mySpotsAsync,
+                          spots: mySpots,
+                          ref: ref,
+                        ),
+                        const _FavoritesTab(),
+                        const _ReviewsTab(),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -181,32 +219,73 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _TabSpec {
-  const _TabSpec({required this.label, required this.spots});
-  final String label;
-  final List<MockSpot> spots;
-}
-
 enum _OverflowAction { theme, logout }
 
-class _SpotListTab extends StatelessWidget {
-  const _SpotListTab({required this.spots});
-  final List<MockSpot> spots;
+class _MySpotsTab extends StatelessWidget {
+  const _MySpotsTab({
+    required this.asyncSpots,
+    required this.spots,
+    required this.ref,
+  });
+
+  final AsyncValue<List<Spot>> asyncSpots;
+  final List<Spot> spots;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
+    if (asyncSpots.isLoading && spots.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (asyncSpots.hasError && spots.isEmpty) {
+      return _ErrorTab(
+        message: 'No se pudieron cargar tus spots',
+        onRetry: () => ref.invalidate(mySpotsProvider),
+      );
+    }
     if (spots.isEmpty) {
       return const _EmptyTab(
-        icon: Icons.bookmark_border,
-        title: 'Sin spots todavia',
+        icon: Icons.add_location_alt_outlined,
+        title: 'Aun no tienes spots',
         subtitle: 'Cuando agregues uno aparecera aqui.',
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      itemCount: spots.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (_, i) => SpotListCard(spot: spots[i]),
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(mySpotsProvider),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        itemCount: spots.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, i) => SpotListCard(spot: spots[i]),
+      ),
+    );
+  }
+}
+
+class _FavoritesTab extends StatelessWidget {
+  const _FavoritesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _EmptyTab(
+      icon: Icons.favorite_border,
+      title: 'Favoritos proximamente',
+      subtitle:
+          'Pronto podras guardar tus spots favoritos aqui. '
+          'La funcion llega en una proxima actualizacion.',
+    );
+  }
+}
+
+class _ReviewsTab extends StatelessWidget {
+  const _ReviewsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _EmptyTab(
+      icon: Icons.rate_review_outlined,
+      title: 'Aun no tienes resenas',
+      subtitle: 'Cuando califiques un spot aparecera aqui.',
     );
   }
 }
@@ -254,6 +333,28 @@ class _EmptyTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ErrorTab extends StatelessWidget {
+  const _ErrorTab({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+          const SizedBox(height: 12),
+          Text(message),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
+        ],
       ),
     );
   }

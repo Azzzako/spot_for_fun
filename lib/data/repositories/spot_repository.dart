@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/data/services/spot_service.dart';
+import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/mappers/spot_mapper.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
@@ -15,6 +16,11 @@ class SpotRepository {
 
   Future<List<Spot>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     final dtos = await _service.fetchApproved(filter: filter);
+    return dtos.map((d) => d.toDomain()).toList(growable: false);
+  }
+
+  Future<List<Spot>> fetchByAuthor(String authorId) async {
+    final dtos = await _service.fetchByAuthor(authorId);
     return dtos.map((d) => d.toDomain()).toList(growable: false);
   }
 
@@ -106,4 +112,12 @@ final approvedSpotsProvider = FutureProvider<List<Spot>>((ref) async {
   final repo = ref.watch(spotRepositoryProvider);
   final filter = ref.watch(spotFilterProvider);
   return repo.fetchApproved(filter: filter);
+});
+
+final mySpotsProvider =
+    FutureProvider.autoDispose<List<Spot>>((ref) async {
+  final uid = ref.watch(currentUserIdProvider);
+  if (uid == null) return const [];
+  final repo = ref.watch(spotRepositoryProvider);
+  return repo.fetchByAuthor(uid);
 });
