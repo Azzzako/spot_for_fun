@@ -51,176 +51,158 @@ class ProfileScreen extends ConsumerWidget {
 
     final profile = profileAsync.valueOrNull;
     final mySpots = mySpotsAsync.valueOrNull ?? const <Spot>[];
-
-    if (profile == null) {
-      return Scaffold(
-        backgroundColor: background,
-        appBar: AppBar(
-          backgroundColor: background,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-        ),
-        body: Center(
-          child: profileAsync.isLoading
-              ? const CircularProgressIndicator()
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: Colors.redAccent),
-                    const SizedBox(height: 12),
-                    const Text('No se pudo cargar tu perfil'),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () =>
-                          ref.invalidate(currentProfileProvider),
-                      child: const Text('Reintentar'),
-                    ),
-                  ],
-                ),
-        ),
-      );
-    }
+    final header = profile == null
+        ? ProfileHeader(
+            username: 'Cargando...',
+            userId: 'guest',
+            spotsCount: 0,
+            favoritesCount: 0,
+            reviewsCount: 0,
+          )
+        : ProfileHeader(
+            username: profile.username,
+            userId: profile.id,
+            spotsCount: mySpots.length,
+            favoritesCount: 0,
+            reviewsCount: 0,
+          );
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: background,
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 240,
-              collapsedHeight: 110,
-              backgroundColor: background,
-              surfaceTintColor: Colors.transparent,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              forceElevated: innerBoxIsScrolled,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              title: Text(
-                profile.username,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              centerTitle: false,
-              titleSpacing: 20,
-              actions: [
-                IconButton(
-                  tooltip: 'Notificaciones',
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Sin notificaciones nuevas')),
-                    );
-                  },
+        appBar: AppBar(
+          backgroundColor: background,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: profile == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).maybePop(),
                 ),
-                PopupMenuButton<_OverflowAction>(
-                  tooltip: 'Mas opciones',
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (action) async {
-                    switch (action) {
-                      case _OverflowAction.theme:
-                        final current = theme.mode;
-                        final next = switch (current) {
-                          ThemeModePref.system => ThemeModePref.light,
-                          ThemeModePref.light => ThemeModePref.dark,
-                          ThemeModePref.dark => ThemeModePref.system,
-                        };
-                        await theme.setMode(next);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content:
-                                    Text('Tema: ${_themeLabel(next)}')),
-                          );
-                        }
-                        break;
-                      case _OverflowAction.logout:
-                        await _confirmLogout(context, ref);
-                        break;
+          actions: [
+            IconButton(
+              tooltip: 'Notificaciones',
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sin notificaciones nuevas')),
+                );
+              },
+            ),
+            PopupMenuButton<_OverflowAction>(
+              tooltip: 'Mas opciones',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) async {
+                switch (action) {
+                  case _OverflowAction.theme:
+                    final current = theme.mode;
+                    final next = switch (current) {
+                      ThemeModePref.system => ThemeModePref.light,
+                      ThemeModePref.light => ThemeModePref.dark,
+                      ThemeModePref.dark => ThemeModePref.system,
+                    };
+                    await theme.setMode(next);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Tema: ${_themeLabel(next)}')),
+                      );
                     }
-                  },
-                  itemBuilder: (ctx) => [
-                    PopupMenuItem(
-                      value: _OverflowAction.theme,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.brightness_6_outlined),
-                          const SizedBox(width: 12),
-                          Text('Tema: ${_themeLabel(theme.mode)}'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: _OverflowAction.logout,
-                      child: Row(
-                        children: [
-                          Icon(Icons.logout, color: Colors.redAccent),
-                          SizedBox(width: 12),
-                          Text('Cerrar sesion'),
-                        ],
-                      ),
-                    ),
-                  ],
+                    break;
+                  case _OverflowAction.logout:
+                    await _confirmLogout(context, ref);
+                    break;
+                }
+              },
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: _OverflowAction.theme,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.brightness_6_outlined),
+                      const SizedBox(width: 12),
+                      Text('Tema: ${_themeLabel(theme.mode)}'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: _OverflowAction.logout,
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, color: Colors.redAccent),
+                      SizedBox(width: 12),
+                      Text('Cerrar sesion'),
+                    ],
+                  ),
                 ),
               ],
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.none,
-                titlePadding: EdgeInsets.zero,
-                background: Padding(
-                  padding: const EdgeInsets.only(
-                      top: kToolbarHeight + 4),
-                  child: ProfileHeader(
-                    username: profile.username,
-                    userId: profile.id,
-                    spotsCount: mySpots.length,
-                    favoritesCount: 0,
-                    reviewsCount: 0,
-                  ),
-                ),
-              ),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SliverTabBarDelegate(
-                tabBar: TabBar(
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  labelColor: AppColors.brandForest,
-                  unselectedLabelColor:
-                      Theme.of(context).colorScheme.onSurfaceVariant,
-                  indicatorColor: AppColors.brandForest,
-                  indicatorWeight: 3,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                  tabs: const [
-                    Tab(text: 'Mis Spots'),
-                    Tab(text: 'Favoritos'),
-                    Tab(text: 'Resenas'),
-                  ],
-                ),
-                background: background,
-              ),
             ),
           ],
-          body: TabBarView(
-            children: [
-              _MySpotsTab(
-                asyncSpots: mySpotsAsync,
-                spots: mySpots,
-                ref: ref,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelColor: AppColors.brandForest,
+                unselectedLabelColor:
+                    Theme.of(context).colorScheme.onSurfaceVariant,
+                indicatorColor: AppColors.brandForest,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+                tabs: const [
+                  Tab(text: 'Mis Spots'),
+                  Tab(text: 'Favoritos'),
+                  Tab(text: 'Resenas'),
+                ],
               ),
-              const _FavoritesTab(),
-              const _ReviewsTab(),
-            ],
+            ),
           ),
         ),
+        body: profile == null
+            ? Center(
+                child: profileAsync.isLoading
+                    ? const CircularProgressIndicator()
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline,
+                              size: 48, color: Colors.redAccent),
+                          const SizedBox(height: 12),
+                          const Text('No se pudo cargar tu perfil'),
+                          const SizedBox(height: 12),
+                          OutlinedButton(
+                            onPressed: () =>
+                                ref.invalidate(currentProfileProvider),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+              )
+            : Column(
+                children: [
+                  header,
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _MySpotsTab(
+                          asyncSpots: mySpotsAsync,
+                          spots: mySpots,
+                          ref: ref,
+                        ),
+                        const _FavoritesTab(),
+                        const _ReviewsTab(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -238,39 +220,6 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 enum _OverflowAction { theme, logout }
-
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  const _SliverTabBarDelegate({
-    required this.tabBar,
-    required this.background,
-  });
-
-  final TabBar tabBar;
-  final Color background;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      color: background,
-      child: tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) {
-    return tabBar != oldDelegate.tabBar ||
-        background != oldDelegate.background;
-  }
-}
 
 class _MySpotsTab extends StatelessWidget {
   const _MySpotsTab({
