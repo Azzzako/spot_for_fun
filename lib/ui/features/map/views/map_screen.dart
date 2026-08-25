@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
+import 'package:spot_for_fun/ui/features/map/widgets/spot_peek_card.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -115,6 +119,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  Future<void> _showSpotPeek(Spot spot) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (ctx) => SpotPeekCard(
+        spot: spot,
+        onClose: () => Navigator.of(ctx).pop(),
+        onViewDetail: () {
+          Navigator.of(ctx).pop();
+          context.push(AppRoutes.spotDetail(spot.id));
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mapViewModelProvider);
@@ -164,9 +184,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         point: LatLng(s.lat, s.lng),
                         width: 32,
                         height: 32,
-                        child: spotMarkerWidget(
-                          kind: kind,
-                          brightness: brightness,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _showSpotPeek(s),
+                          child: spotMarkerWidget(
+                            kind: kind,
+                            brightness: brightness,
+                          ),
                         ),
                       );
                     }).toList(),
