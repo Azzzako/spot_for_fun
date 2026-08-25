@@ -59,15 +59,18 @@ class AppShell extends StatelessWidget {
           child: navigationShell,
         ),
       ),
-      floatingActionButton: FloatingActionButton.large(
-        heroTag: 'create-spot',
-        backgroundColor: _kBrandAccent,
-        foregroundColor: Colors.black,
-        elevation: 12,
-        focusElevation: 14,
-        hoverElevation: 14,
-        onPressed: () => context.push(AppRoutes.spotCreate),
-        child: const Icon(Icons.add, size: 36),
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 28),
+        child: FloatingActionButton(
+          heroTag: 'create-spot',
+          backgroundColor: _kBrandAccent,
+          foregroundColor: Colors.black,
+          elevation: 10,
+          focusElevation: 12,
+          hoverElevation: 12,
+          onPressed: () => context.push(AppRoutes.spotCreate),
+          child: const Icon(Icons.add, size: 28),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(
