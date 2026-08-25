@@ -5,15 +5,33 @@ import 'package:spot_for_fun/ui/core/router/app_router.dart';
 
 const Color _kBrandAccent = Color(0xFFF2C14E);
 
+const int _placeholderIndex = 2;
+
+int _destinationToBranch(int destinationIndex) {
+  if (destinationIndex == _placeholderIndex) return destinationIndex;
+  return destinationIndex > _placeholderIndex
+      ? destinationIndex - 1
+      : destinationIndex;
+}
+
+int _branchToDestination(int branchIndex) {
+  return branchIndex >= _placeholderIndex
+      ? branchIndex + 1
+      : branchIndex;
+}
+
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
-  void _goBranch(int index) {
+  void _goBranch(int destinationIndex) {
+    if (destinationIndex == _placeholderIndex) return;
+    final branchIndex = _destinationToBranch(destinationIndex);
     navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
+      branchIndex,
+      initialLocation: destinationIndex ==
+          _branchToDestination(navigationShell.currentIndex),
     );
   }
 
@@ -51,7 +69,7 @@ class AppShell extends StatelessWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
+        selectedIndex: _branchToDestination(navigationShell.currentIndex),
         onDestinationSelected: _goBranch,
         destinations: [
           const NavigationDestination(
