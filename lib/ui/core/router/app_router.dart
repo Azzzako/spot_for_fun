@@ -14,6 +14,38 @@ import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.d
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/myspots/my_spots_screen.dart';
 
+const _kFadeThrough = Duration(milliseconds: 300);
+const _kFadeThroughReverse = Duration(milliseconds: 250);
+
+CustomTransitionPage<T> fadeThroughPage<T>({
+  required Widget child,
+  required GoRouterState state,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: _kFadeThrough,
+    reverseTransitionDuration: _kFadeThroughReverse,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return AnimatedBuilder(
+        animation: Listenable.merge([animation, secondaryAnimation]),
+        builder: (context, _) {
+          final incoming = Curves.easeInOutCubic.transform(animation.value);
+          final outgoing =
+              Curves.easeInOutCubic.transform(secondaryAnimation.value);
+          final opacity = (incoming * (1.0 - outgoing)).clamp(0.0, 1.0);
+          final scale = 0.92 + 0.08 * incoming;
+          return Opacity(
+            opacity: opacity,
+            child: Transform.scale(scale: scale, child: child),
+          );
+        },
+        child: child,
+      );
+    },
+  );
+}
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _mapaNavigatorKey = GlobalKey<NavigatorState>();
 final _myspotsNavigatorKey = GlobalKey<NavigatorState>();
@@ -97,28 +129,42 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.login,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const LoginScreen(),
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const LoginScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.register,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const RegisterScreen(),
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const RegisterScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.spotCreate,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateSpotScreen(),
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const CreateSpotScreen(),
+        ),
       ),
       GoRoute(
         path: '/spots/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, st) =>
-            SpotDetailScreen(spotId: st.pathParameters['id']!),
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: SpotDetailScreen(spotId: state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: AppRoutes.adminPending,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const AdminPendingScreen(),
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const AdminPendingScreen(),
+        ),
       ),
     ],
   );
