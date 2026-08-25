@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
+import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 
 class SpotPeekCard extends StatelessWidget {
   const SpotPeekCard({
@@ -31,7 +32,11 @@ class SpotPeekCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Thumbnail(photos: spot.photos, typeLabel: spot.type.label),
+                _Thumbnail(
+                  photos: spot.photos,
+                  spotId: spot.id,
+                  typeLabel: spot.type.label,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -92,25 +97,36 @@ class SpotPeekCard extends StatelessWidget {
 }
 
 class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.photos, required this.typeLabel});
+  const _Thumbnail({
+    required this.photos,
+    required this.spotId,
+    required this.typeLabel,
+  });
 
   final List<SpotPhoto> photos;
+  final String spotId;
   final String typeLabel;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fallback = Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        Icons.image_not_supported_outlined,
-        size: 32,
-        color: scheme.onSurfaceVariant,
+    final fallback = ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 80,
+        height: 80,
+        child: Image.asset(
+          defaultSpotImageFor(spotId),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            color: scheme.surfaceContainerHighest,
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: 32,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
 

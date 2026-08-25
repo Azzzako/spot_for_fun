@@ -16,7 +16,7 @@ class CreateSpotState {
     this.pickedLocation,
     this.locating = false,
     this.type = SpotType.street,
-    this.difficulty = SpotDifficulty.beginner,
+    this.difficulty,
     this.bestTime = const {},
     this.photos = const [],
     this.submitState = SubmitState.idle,
@@ -27,7 +27,7 @@ class CreateSpotState {
   final LatLng? pickedLocation;
   final bool locating;
   final SpotType type;
-  final SpotDifficulty difficulty;
+  final SpotDifficulty? difficulty;
   final Set<BestTimeSlot> bestTime;
   final List<PhotoItem> photos;
   final SubmitState submitState;
@@ -48,6 +48,7 @@ class CreateSpotState {
     int? uploadedCount,
     String? errorMessage,
     bool clearErrorMessage = false,
+    bool clearDifficulty = false,
     bool clearPickedLocation = false,
   }) {
     return CreateSpotState(
@@ -56,7 +57,7 @@ class CreateSpotState {
           : (pickedLocation ?? this.pickedLocation),
       locating: locating ?? this.locating,
       type: type ?? this.type,
-      difficulty: difficulty ?? this.difficulty,
+      difficulty: clearDifficulty ? null : (difficulty ?? this.difficulty),
       bestTime: bestTime ?? this.bestTime,
       photos: photos ?? this.photos,
       submitState: submitState ?? this.submitState,
@@ -112,6 +113,10 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
     state = state.copyWith(difficulty: d);
   }
 
+  void clearDifficulty() {
+    state = state.copyWith(clearDifficulty: true);
+  }
+
   void toggleBestTime(BestTimeSlot slot) {
     final next = <BestTimeSlot>{...state.bestTime};
     if (next.contains(slot)) {
@@ -143,6 +148,20 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
       state = state.copyWith(
         submitState: SubmitState.error,
         errorMessage: 'Selecciona al menos un mejor horario',
+      );
+      return;
+    }
+    if (state.difficulty == null) {
+      state = state.copyWith(
+        submitState: SubmitState.error,
+        errorMessage: 'Selecciona una dificultad',
+      );
+      return;
+    }
+    if (state.photos.length < 2) {
+      state = state.copyWith(
+        submitState: SubmitState.error,
+        errorMessage: 'Agrega al menos 2 fotos',
       );
       return;
     }
@@ -179,7 +198,7 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
         lat: loc.latitude,
         lng: loc.longitude,
         type: state.type,
-        difficulty: state.difficulty,
+        difficulty: state.difficulty!,
         bestTime: state.bestTime.toList(),
         safetyNotes: safetyNotes,
       );

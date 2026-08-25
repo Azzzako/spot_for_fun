@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 
 final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
@@ -64,7 +65,7 @@ class _DetailBody extends ConsumerWidget {
           expandedHeight: 260,
           pinned: true,
           flexibleSpace: FlexibleSpaceBar(
-            background: _PhotoGallery(photos: spot.photos),
+            background: _PhotoGallery(photos: spot.photos, spotId: spot.id),
           ),
           actions: [
             if (canSeePrivate)
@@ -236,19 +237,24 @@ class _DetailBody extends ConsumerWidget {
 }
 
 class _PhotoGallery extends StatelessWidget {
-  const _PhotoGallery({required this.photos});
+  const _PhotoGallery({required this.photos, required this.spotId});
   final List<SpotPhoto> photos;
+  final String spotId;
 
   @override
   Widget build(BuildContext context) {
     if (photos.isEmpty) {
-      return Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Center(
-          child: Icon(
-            Icons.image_not_supported_outlined,
-            size: 48,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+      return Image.asset(
+        defaultSpotImageFor(spotId),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Center(
+            child: Icon(
+              Icons.image_not_supported_outlined,
+              size: 48,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -259,9 +265,9 @@ class _PhotoGallery extends StatelessWidget {
         imageUrl: photos[i].url,
         fit: BoxFit.cover,
         placeholder: (_, _) => Container(color: Colors.black12),
-        errorWidget: (_, _, _) => Container(
-          color: Colors.black26,
-          child: const Icon(Icons.broken_image, color: Colors.white54),
+        errorWidget: (_, _, _) => Image.asset(
+          defaultSpotImageFor('$spotId,$i'),
+          fit: BoxFit.cover,
         ),
       ),
     );
