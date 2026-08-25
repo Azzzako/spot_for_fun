@@ -241,7 +241,8 @@ class ProfileHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ClipOval(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
                   width: 80,
                   height: 80,
@@ -260,23 +261,24 @@ class ProfileHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 20),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _StatValue(value: profile.spotsCount.toString()),
+                  _StatValue(value: profile.favoritesCount.toString()),
+                  _StatValue(value: profile.reviewsCount.toString()),
+                ],
+              ),
+              const SizedBox(width: 24),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _StatRow(
-                      value: profile.spotsCount.toString(),
-                      label: 'Spots',
-                    ),
-                    _StatRow(
-                      value: profile.favoritesCount.toString(),
-                      label: 'Favoritos',
-                    ),
-                    _StatRow(
-                      value: profile.reviewsCount.toString(),
-                      label: 'Resenas',
-                    ),
+                    _StatLabel(label: 'Spots'),
+                    _StatLabel(label: 'Favoritos'),
+                    _StatLabel(label: 'Resenas'),
                   ],
                 ),
               ),
@@ -310,10 +312,27 @@ class ProfileHeader extends StatelessWidget {
   }
 }
 
-class _StatRow extends StatelessWidget {
-  const _StatRow({required this.value, required this.label});
-
+class _StatValue extends StatelessWidget {
+  const _StatValue({required this.value});
   final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Text(
+        value,
+        style: theme.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatLabel extends StatelessWidget {
+  const _StatLabel({required this.label});
   final String label;
 
   @override
@@ -321,24 +340,11 @@ class _StatRow extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
