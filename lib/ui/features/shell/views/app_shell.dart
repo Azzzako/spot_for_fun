@@ -20,7 +20,27 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        switchInCurve: Curves.easeInOutCubic,
+        switchOutCurve: Curves.easeInOutCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        layoutBuilder: (currentChild, previousChildren) {
+          return Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              ...previousChildren,
+              ?currentChild,
+            ],
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(navigationShell.currentIndex),
+          child: navigationShell,
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'create-spot',
         backgroundColor: _kBrandAccent,
