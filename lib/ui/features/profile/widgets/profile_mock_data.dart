@@ -233,119 +233,131 @@ class ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 140,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: Image.asset(
-                    defaultSpotImageFor(profile.avatarSeed),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.person,
-                        size: 40,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+              Image.asset(
+                defaultSpotImageFor(profile.avatarSeed),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.person,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _StatValue(value: profile.spotsCount.toString()),
-                  _StatValue(value: profile.favoritesCount.toString()),
-                  _StatValue(value: profile.reviewsCount.toString()),
-                ],
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x99000000),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16,
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _StatLabel(label: 'Spots'),
-                    _StatLabel(label: 'Favoritos'),
-                    _StatLabel(label: 'Resenas'),
+                    _OverlayStatColumn(
+                      value: profile.spotsCount.toString(),
+                      label: 'Spots',
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
+                    _OverlayStatColumn(
+                      value: profile.favoritesCount.toString(),
+                      label: 'Favoritos',
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
+                    _OverlayStatColumn(
+                      value: profile.reviewsCount.toString(),
+                      label: 'Resenas',
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.name,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  profile.city,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatValue extends StatelessWidget {
-  const _StatValue({required this.value});
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Text(
-        value,
-        style: theme.textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                profile.name,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                profile.city,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _StatLabel extends StatelessWidget {
-  const _StatLabel({required this.label});
+class _OverlayStatColumn extends StatelessWidget {
+  const _OverlayStatColumn({required this.value, required this.label});
+
+  final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Text(
-        label,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+          ),
         ),
-      ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
     );
   }
 }

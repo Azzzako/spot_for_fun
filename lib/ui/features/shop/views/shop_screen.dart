@@ -33,32 +33,35 @@ class ShopScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 96,
-                height: 96,
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
                   color: AppColors.brandGold.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.storefront,
-                  size: 48,
+                  size: 64,
                   color: AppColors.brandGold,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
               Text(
-                'Tienda Spot For Fun',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                'Proximamente',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
-                'Muy pronto podras adquirir gear, ropa y accesorios '
+                'La tienda de Spot For Fun esta en construccion. '
+                'Pronto podras adquirir gear, ropa y accesorios '
                 'directamente desde la app.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.5,
                 ),
               ),
             ],
