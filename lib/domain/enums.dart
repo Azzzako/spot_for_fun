@@ -3,11 +3,11 @@ enum SpotType { street, park, bowl, plaza, diy, skateshop }
 extension SpotTypeX on SpotType {
   String get dbValue => name;
   String get label => switch (this) {
-        SpotType.street => 'Street',
-        SpotType.park => 'Park',
+        SpotType.street => 'Escaleras',
+        SpotType.park => 'Barandal',
         SpotType.bowl => 'Bowl',
-        SpotType.plaza => 'Plaza',
-        SpotType.diy => 'DIY',
+        SpotType.plaza => 'Plano',
+        SpotType.diy => 'Banco',
         SpotType.skateshop => 'Skateshop',
       };
   static SpotType fromDb(Object? raw) {
