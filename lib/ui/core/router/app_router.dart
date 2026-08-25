@@ -11,7 +11,6 @@ import 'package:spot_for_fun/ui/features/profile/views/favorites_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
 import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
-import 'package:spot_for_fun/ui/features/spots/views/create/spot_location_picker_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/myspots/my_spots_screen.dart';
 
@@ -59,7 +58,6 @@ class AppRoutes {
   static const register = '/register';
   static const map = '/';
   static const spotCreate = '/spots/create';
-  static const spotPickLocation = '/spots/create/pick-location';
   static const mySpots = '/spots/mine';
   static const profile = '/profile';
   static const favorites = '/profile/favorites';
@@ -150,14 +148,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadeThroughPage(
           state: state,
           child: const CreateSpotScreen(),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.spotPickLocation,
-        parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
-          state: state,
-          child: const SpotLocationPickerScreen(),
         ),
       ),
       GoRoute(

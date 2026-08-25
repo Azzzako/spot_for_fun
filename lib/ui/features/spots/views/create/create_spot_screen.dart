@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -6,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/create_spot_view_model.dart';
 
@@ -21,6 +23,26 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _safetyCtrl = TextEditingController();
+  final MapController _mapController = MapController();
+  bool _hydrated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final loc = await ref
+          .read(createSpotViewModelProvider.notifier)
+          .initLocation();
+      if (!mounted) {
+        setState(() => _hydrated = true);
+        return;
+      }
+      if (loc != null) {
+        _mapController.move(loc, 16);
+      }
+      setState(() => _hydrated = true);
+    });
+  }
 
   @override
   void dispose() {
@@ -63,156 +85,275 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     final state = ref.watch(createSpotViewModelProvider);
     final vm = ref.read(createSpotViewModelProvider.notifier);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surface =
+        isDark ? theme.colorScheme.surface : AppColors.brandCream;
     final busy = state.submitState == SubmitState.uploading;
 
     return Scaffold(
-      backgroundColor: theme.brightness == Brightness.dark
-          ? theme.colorScheme.surface
-          : AppColors.brandCream,
-      appBar: AppBar(
-        backgroundColor: theme.brightness == Brightness.dark
-            ? theme.colorScheme.surface
-            : AppColors.brandCream,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: const Text(
-          'Agrega un nuevo spot',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        centerTitle: false,
-      ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            children: [
-              _PhotosCard(
-                photos: state.photos,
-                onPhotosChanged: vm.setPhotos,
+      backgroundColor: surface,
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter:
+                    state.pickedLocation ?? LocationHelper.neutralCenter,
+                initialZoom: 16,
+                onTap: (_, point) => vm.setPickedLocation(point),
               ),
-              const SizedBox(height: 24),
-              _SectionLabel('Nombre del spot'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: _inputDecoration(
-                  hint: 'Ej. Escaleras del Parque',
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.spotforfun.app',
+                  tileProvider: NetworkTileProvider(),
                 ),
-                maxLength: 80,
-                textInputAction: TextInputAction.next,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Requerido';
-                  if (v.trim().length < 3) return 'Minimo 3 caracteres';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _SectionLabel('Ubicacion'),
-              const SizedBox(height: 8),
-              _LocationField(
-                location: state.pickedLocation,
-                onTap: () async {
-                  await context.push(AppRoutes.spotPickLocation);
-                },
-              ),
-              const SizedBox(height: 16),
-              _SectionLabel('Tipo de spot'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: SpotType.values.map((t) {
-                  final selected = state.type == t;
-                  return _TypeChip(
-                    label: t.label,
-                    selected: selected,
-                    onTap: () => vm.setType(t),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              _SectionLabel('Descripcion'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: _inputDecoration(
-                  hint: 'Cuentanos algo sobre el spot...',
+                MarkerLayer(
+                  markers: [
+                    if (state.pickedLocation != null)
+                      Marker(
+                        point: state.pickedLocation!,
+                        width: 32,
+                        height: 32,
+                        child: const Icon(
+                          Icons.location_on,
+                          size: 30,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                  ],
                 ),
-                maxLines: 4,
-                maxLength: 500,
+              ],
+            ),
+          ),
+          if (state.locating || !_hydrated)
+            const Center(
+              child: SizedBox(
+                height: 28,
+                width: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
-              const SizedBox(height: 8),
-              _MoreDetailsTile(
-                state: state,
-                vm: vm,
-                safetyCtrl: _safetyCtrl,
+            ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            left: 12,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 4,
+              child: IconButton(
+                tooltip: 'Cerrar',
+                icon: const Icon(Icons.close, color: AppColors.brandInk),
+                onPressed: () => Navigator.of(context).maybePop(),
               ),
-              if (state.submitState == SubmitState.partialSuccess)
-                _Banner(
-                  icon: Icons.warning_amber_rounded,
-                  text:
-                      'Spot creado, pero algunas fotos fallaron:\n${state.errorMessage ?? ''}',
-                ),
-              if (state.submitState == SubmitState.error &&
-                  state.errorMessage != null)
-                _Banner(
-                  icon: Icons.error_outline,
-                  text: state.errorMessage!,
-                  error: true,
-                ),
-              const SizedBox(height: 24),
-              if (busy)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _UploadProgress(
-                    current: state.uploadedCount,
-                    total: state.filePhotoCount,
-                  ),
-                ),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.brandGold,
-                    foregroundColor: AppColors.brandInk,
-                    disabledBackgroundColor:
-                        AppColors.brandGold.withValues(alpha: 0.55),
-                    disabledForegroundColor: AppColors.brandInk
-                        .withValues(alpha: 0.5),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 12,
+            right: 12,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 4,
+              child: IconButton(
+                tooltip: 'Reubicar',
+                icon: const Icon(Icons.my_location,
+                    color: AppColors.brandForest),
+                onPressed: state.locating
+                    ? null
+                    : () async {
+                        final loc =
+                            await vm.relocateFromGps();
+                        if (!mounted || loc == null) return;
+                        _mapController.move(loc, 16);
+                      },
+              ),
+            ),
+          ),
+          DraggableScrollableSheet(
+            initialChildSize: 0.55,
+            minChildSize: 0.18,
+            maxChildSize: 0.94,
+            snap: true,
+            snapSizes: const [0.18, 0.55, 0.94],
+            builder: (ctx, scrollController) {
+              final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+              return Container(
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 16,
+                      offset: const Offset(0, -2),
                     ),
-                  ),
-                  onPressed: busy ? null : _submit,
-                  child: busy
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: AppColors.brandInk,
-                          ),
-                        )
-                      : const Text(
-                          'PUBLICAR SPOT',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomInset),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Agrega un nuevo spot',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Toca el mapa para fijar la ubicacion. '
+                          'Llena los datos abajo.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _PhotosCard(
+                          photos: state.photos,
+                          onPhotosChanged: vm.setPhotos,
+                        ),
+                        const SizedBox(height: 20),
+                        _SectionLabel('Nombre del spot'),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _nameCtrl,
+                          decoration: _inputDecoration(
+                            hint: 'Ej. Escaleras del Parque',
+                          ),
+                          maxLength: 80,
+                          textInputAction: TextInputAction.next,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Requerido';
+                            }
+                            if (v.trim().length < 3) {
+                              return 'Minimo 3 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionLabel('Ubicacion'),
+                        const SizedBox(height: 8),
+                        _LocationDisplay(location: state.pickedLocation),
+                        const SizedBox(height: 16),
+                        _SectionLabel('Tipo de spot'),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: SpotType.values.map((t) {
+                            final selected = state.type == t;
+                            return _TypeChip(
+                              label: t.label,
+                              selected: selected,
+                              onTap: () => vm.setType(t),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        _SectionLabel('Descripcion'),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _descCtrl,
+                          decoration: _inputDecoration(
+                            hint: 'Cuentanos algo sobre el spot...',
+                          ),
+                          maxLines: 3,
+                          maxLength: 500,
+                        ),
+                        const SizedBox(height: 4),
+                        _MoreDetailsTile(
+                          state: state,
+                          vm: vm,
+                          safetyCtrl: _safetyCtrl,
+                        ),
+                        if (state.submitState == SubmitState.partialSuccess)
+                          _Banner(
+                            icon: Icons.warning_amber_rounded,
+                            text:
+                                'Spot creado, pero algunas fotos fallaron:\n${state.errorMessage ?? ''}',
+                          ),
+                        if (state.submitState == SubmitState.error &&
+                            state.errorMessage != null)
+                          _Banner(
+                            icon: Icons.error_outline,
+                            text: state.errorMessage!,
+                            error: true,
+                          ),
+                        const SizedBox(height: 16),
+                        if (busy)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _UploadProgress(
+                              current: state.uploadedCount,
+                              total: state.filePhotoCount,
+                            ),
+                          ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.brandGold,
+                              foregroundColor: AppColors.brandInk,
+                              disabledBackgroundColor:
+                                  AppColors.brandGold.withValues(alpha: 0.55),
+                              disabledForegroundColor: AppColors.brandInk
+                                  .withValues(alpha: 0.5),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: busy ? null : _submit,
+                            child: busy
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: AppColors.brandInk,
+                                    ),
+                                  )
+                                : const Text(
+                                    'PUBLICAR SPOT',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        ),
+        ],
       ),
     );
   }
@@ -303,60 +444,47 @@ class _PhotosCard extends StatelessWidget {
   }
 }
 
-class _LocationField extends StatelessWidget {
-  const _LocationField({
-    required this.location,
-    required this.onTap,
-  });
+class _LocationDisplay extends StatelessWidget {
+  const _LocationDisplay({required this.location});
 
   final LatLng? location;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final hasLocation = location != null;
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AppColors.brandBeige),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.brandBeige),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              Icon(
-                hasLocation
-                    ? Icons.location_on
-                    : Icons.search,
-                color: hasLocation
-                    ? AppColors.brandForest
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  hasLocation
-                      ? '${location!.latitude.toStringAsFixed(5)}, '
-                          '${location!.longitude.toStringAsFixed(5)}'
-                      : 'Busca o coloca en el mapa',
-                  style: TextStyle(
-                    color: hasLocation
-                        ? AppColors.brandInk
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        hasLocation ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.brandForest),
-            ],
+      child: Row(
+        children: [
+          Icon(
+            hasLocation ? Icons.location_on : Icons.search,
+            color: hasLocation
+                ? AppColors.brandForest
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              hasLocation
+                  ? '${location!.latitude.toStringAsFixed(5)}, '
+                      '${location!.longitude.toStringAsFixed(5)}'
+                  : 'Toca el mapa para fijar la ubicacion',
+              style: TextStyle(
+                color: hasLocation
+                    ? AppColors.brandInk
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight:
+                    hasLocation ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
