@@ -98,26 +98,29 @@ class AppShell extends StatelessWidget {
           child: navigationShell,
         ),
       ),
-      floatingActionButton: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeInOutCubic,
-        switchOutCurve: Curves.easeInOutCubic,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: _isOnMapa
-            ? FloatingActionButton.large(
-                key: const ValueKey('create-spot-fab'),
-                heroTag: 'create-spot',
-                backgroundColor: _kBrandAccent,
-                foregroundColor: Colors.black,
-                elevation: 12,
-                focusElevation: 14,
-                hoverElevation: 14,
-                onPressed: () => context.push(AppRoutes.spotCreate),
-                child: const Icon(Icons.add, size: 36),
-              )
-            : const SizedBox.shrink(key: ValueKey('create-spot-hidden')),
+      floatingActionButton: AnimatedScale(
+        scale: _isOnMapa ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInCubic,
+        alignment: Alignment.center,
+        child: IgnorePointer(
+          ignoring: !_isOnMapa,
+          child: AnimatedOpacity(
+            opacity: _isOnMapa ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInCubic,
+            child: FloatingActionButton.large(
+              heroTag: 'create-spot',
+              backgroundColor: _kBrandAccent,
+              foregroundColor: Colors.black,
+              elevation: 12,
+              focusElevation: 14,
+              hoverElevation: 14,
+              onPressed: () => context.push(AppRoutes.spotCreate),
+              child: const Icon(Icons.add, size: 36),
+            ),
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(
