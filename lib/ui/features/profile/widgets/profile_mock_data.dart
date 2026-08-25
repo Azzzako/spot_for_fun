@@ -255,7 +255,8 @@ class ProfileHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
+        SizedBox(
+          height: 140,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -277,18 +278,16 @@ class ProfileHeader extends StatelessWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xCC000000),
-                      Color(0x66000000),
                       Color(0x00000000),
+                      Color(0x99000000),
                     ],
-                    stops: [0.0, 0.4, 1.0],
                   ),
                 ),
               ),
               Positioned(
                 left: 20,
                 right: 20,
-                top: 16,
+                bottom: 16,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -297,7 +296,7 @@ class ProfileHeader extends StatelessWidget {
                         value: spotsCount.toString(), label: 'Spots'),
                     Container(
                       width: 1,
-                      height: 24,
+                      height: 28,
                       color: Colors.white.withValues(alpha: 0.35),
                     ),
                     _OverlayStatColumn(
@@ -305,7 +304,7 @@ class ProfileHeader extends StatelessWidget {
                         label: 'Favoritos'),
                     Container(
                       width: 1,
-                      height: 24,
+                      height: 28,
                       color: Colors.white.withValues(alpha: 0.35),
                     ),
                     _OverlayStatColumn(
@@ -318,12 +317,17 @@ class ProfileHeader extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          child: Text(
-            username,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                username,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ],
