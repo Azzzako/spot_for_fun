@@ -69,9 +69,9 @@ class AppShell extends StatelessWidget {
             label: '',
           ),
           const NavigationDestination(
-            icon: Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite),
-            label: 'Favoritos',
+            icon: Icon(Icons.storefront_outlined),
+            selectedIcon: Icon(Icons.storefront),
+            label: 'Tienda',
           ),
           const NavigationDestination(
             icon: Icon(Icons.person_outline),

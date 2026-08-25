@@ -7,9 +7,9 @@ import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/ui/features/auth/views/login_screen.dart';
 import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
-import 'package:spot_for_fun/ui/features/profile/views/favorites_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
+import 'package:spot_for_fun/ui/features/shop/views/shop_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/myspots/my_spots_screen.dart';
@@ -49,7 +49,7 @@ CustomTransitionPage<T> fadeThroughPage<T>({
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _mapaNavigatorKey = GlobalKey<NavigatorState>();
 final _myspotsNavigatorKey = GlobalKey<NavigatorState>();
-final _favoritesNavigatorKey = GlobalKey<NavigatorState>();
+final _shopNavigatorKey = GlobalKey<NavigatorState>();
 final _perfilNavigatorKey = GlobalKey<NavigatorState>();
 
 class AppRoutes {
@@ -60,7 +60,7 @@ class AppRoutes {
   static const spotCreate = '/spots/create';
   static const mySpots = '/spots/mine';
   static const profile = '/profile';
-  static const favorites = '/profile/favorites';
+  static const shop = '/shop';
   static const adminPending = '/admin/pending';
 
   static String spotDetail(String id) => '/spots/$id';
@@ -107,11 +107,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: _favoritesNavigatorKey,
+            navigatorKey: _shopNavigatorKey,
             routes: [
               GoRoute(
-                path: AppRoutes.favorites,
-                builder: (_, _) => const FavoritesScreen(),
+                path: AppRoutes.shop,
+                builder: (_, _) => const ShopScreen(),
               ),
             ],
           ),
