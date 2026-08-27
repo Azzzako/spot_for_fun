@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 
 final spotByIdProvider =
@@ -249,16 +250,19 @@ class _PhotoGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (photos.isEmpty) {
-      return Image.asset(
-        defaultSpotImageFor(spotId),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: Center(
-            child: Icon(
-              Icons.image_not_supported_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      return GestureDetector(
+        onTap: () => _openFullscreen(context, 0),
+        child: Image.asset(
+          defaultSpotImageFor(spotId),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: Icon(
+                Icons.image_not_supported_outlined,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -266,14 +270,30 @@ class _PhotoGallery extends StatelessWidget {
     }
     return PageView.builder(
       itemCount: photos.length,
-      itemBuilder: (_, i) => CachedNetworkImage(
-        imageUrl: photos[i].url,
-        fit: BoxFit.cover,
-        placeholder: (_, _) => Container(color: Colors.black12),
-        errorWidget: (_, _, _) => Image.asset(
-          defaultSpotImageFor('$spotId,$i'),
+      itemBuilder: (_, i) => GestureDetector(
+        onTap: () => _openFullscreen(context, i),
+        child: CachedNetworkImage(
+          imageUrl: photos[i].url,
           fit: BoxFit.cover,
+          placeholder: (_, _) => Container(color: Colors.black12),
+          errorWidget: (_, _, _) => Image.asset(
+            defaultSpotImageFor('$spotId,$i'),
+            fit: BoxFit.cover,
+          ),
         ),
+      ),
+    );
+  }
+
+  void _openFullscreen(BuildContext context, int index) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      barrierDismissible: true,
+      builder: (_) => SpotPhotoViewerScreen(
+        photos: photos,
+        initialIndex: index,
+        spotId: spotId,
       ),
     );
   }
