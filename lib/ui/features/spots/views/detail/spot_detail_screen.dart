@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
@@ -88,9 +89,13 @@ class _DetailBody extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      spot.name,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      spot.name.toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        textStyle:
+                            theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ),
