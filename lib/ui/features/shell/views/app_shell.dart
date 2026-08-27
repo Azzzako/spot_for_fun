@@ -123,11 +123,24 @@ class AppShell extends StatelessWidget {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedDestinationIndex,
-        onDestinationSelected: _goBranch,
-        destinations:
-            _isOnMapa ? _destinations5 : _destinations4,
+      bottomNavigationBar: AnimatedCrossFade(
+        duration: const Duration(milliseconds: 320),
+        firstCurve: Curves.easeInOutCubic,
+        secondCurve: Curves.easeInOutCubic,
+        crossFadeState:
+            _isOnMapa ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+        firstChild: NavigationBar(
+          key: const ValueKey('shell-nav-mapa'),
+          selectedIndex: _selectedDestinationIndex,
+          onDestinationSelected: _goBranch,
+          destinations: _destinations5,
+        ),
+        secondChild: NavigationBar(
+          key: const ValueKey('shell-nav-rest'),
+          selectedIndex: _selectedDestinationIndex,
+          onDestinationSelected: _goBranch,
+          destinations: _destinations4,
+        ),
       ),
     );
   }
