@@ -256,7 +256,10 @@ class _MySpotsTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         itemCount: spots.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => SpotListCard(spot: spots[i]),
+        itemBuilder: (_, i) => SpotListCard(
+          spot: spots[i],
+          onTap: () => context.push(AppRoutes.spotDetail(spots[i].id)),
+        ),
       ),
     );
   }
