@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
-import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
+import 'package:spot_for_fun/ui/features/map/widgets/filters_sheet.dart';
 import 'package:spot_for_fun/ui/features/map/widgets/spot_peek_card.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -23,6 +23,7 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _mapController = MapController();
+  double _currentZoom = 15;
 
   @override
   void initState() {
@@ -59,7 +60,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       case LocationStatus.serviceOff:
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Activa tu GPS para mostrar tu ubicacion'),
+            content: const Text('Activa tu GPS para mostrar tu ubicación'),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: 'Configurar',
@@ -71,7 +72,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       case LocationStatus.denied:
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Sin permiso de ubicacion'),
+            content: const Text('Sin permiso de ubicación'),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: 'Reintentar',
@@ -83,7 +84,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       case LocationStatus.deniedForever:
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Permiso de ubicacion bloqueado'),
+            content: const Text('Permiso de ubicación bloqueado'),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 8),
             action: SnackBarAction(
@@ -96,7 +97,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       case LocationStatus.error:
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Error al acceder a la ubicacion'),
+            content: const Text('Error al acceder a la ubicación'),
             behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: 'Reintentar',
@@ -110,12 +111,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  void openFilters() {
-    showModalBottomSheet(
+  void _openFilters() {
+    showModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => const _FiltersSheet(),
+      useSafeArea: true,
+      enableDrag: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (_) => const FiltersSheet(),
     );
   }
 
@@ -141,6 +144,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final spotsAsync = ref.watch(approvedSpotsProvider);
     final brightness = Theme.of(context).brightness;
     final filter = ref.watch(spotFilterProvider);
+    final theme = Theme.of(context);
+    final showLabels = _currentZoom >= 14;
+
+    final activeChips = <Widget>[
+      if (filter.types.isNotEmpty)
+        _activeBadge(
+          context,
+          label: 'Tipo: ${filter.types.length}',
+          onClear: () => ref.read(spotFilterProvider.notifier).state =
+              filter.copyWith(types: const {}),
+        ),
+      if (filter.difficulties.isNotEmpty)
+        _activeBadge(
+          context,
+          label: 'Dif: ${filter.difficulties.length}',
+          onClear: () => ref.read(spotFilterProvider.notifier).state =
+              filter.copyWith(difficulties: const {}),
+        ),
+      if (filter.minRating > 0)
+        _activeBadge(
+          context,
+          label: '≥ ${filter.minRating.toStringAsFixed(1)}★',
+          onClear: () => ref.read(spotFilterProvider.notifier).state =
+              filter.copyWith(minRating: 0),
+        ),
+    ];
 
     return Scaffold(
       body: Stack(
@@ -148,10 +177,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: state.currentLocation ?? LocationHelper.neutralCenter,
+              initialCenter:
+                  state.currentLocation ?? LocationHelper.neutralCenter,
               initialZoom: 15,
               minZoom: 3,
               maxZoom: 19,
+              onPositionChanged: (pos, _) {
+                final z = pos.zoom;
+                if (z != _currentZoom) {
+                  setState(() => _currentZoom = z);
+                }
+              },
             ),
             children: [
               TileLayer(
@@ -169,7 +205,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       height: 32,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          color: AppColors.brandForest,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
@@ -182,14 +218,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       final kind = resolveSpotKind(s);
                       return Marker(
                         point: LatLng(s.lat, s.lng),
-                        width: 32,
-                        height: 32,
+                        width: kSpotMarkerWidth,
+                        height: kSpotMarkerHeight,
+                        alignment: Alignment.topCenter,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () => _showSpotPeek(s),
                           child: spotMarkerWidget(
                             kind: kind,
                             brightness: brightness,
+                            label: s.name,
+                            showLabel: showLabels,
                           ),
                         ),
                       );
@@ -202,55 +241,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ],
           ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 12,
-            child: Material(
-              color: Theme.of(context).colorScheme.surface,
-              shape: const CircleBorder(),
-              elevation: 2,
-              child: Builder(
-                builder: (ctx) => IconButton(
-                  tooltip: 'Filtros',
-                  icon: const Icon(Icons.filter_alt_outlined),
-                  onPressed: () => openFilters(),
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: _ExplorarHeader(
+                  onFilterTap: _openFilters,
+                  filterCount: filter.types.length +
+                      filter.difficulties.length +
+                      (filter.minRating > 0 ? 1 : 0),
                 ),
               ),
             ),
           ),
-          if (spotsAsync.isLoading)
-            const Positioned(
-              top: 12,
-              left: 12,
-              child: SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          if (spotsAsync.hasError)
-            Positioned(
-              top: 12,
-              left: 12,
-              right: 12,
-              child: Material(
-                color: Theme.of(context).colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, size: 18),
-                      const SizedBox(width: 8),
-                      const Expanded(child: Text('No se pudieron cargar los spots')),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, size: 18),
-                        onPressed: () => ref.invalidate(approvedSpotsProvider),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           Positioned(
             left: 12,
             right: 12,
@@ -259,38 +265,46 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: Wrap(
                 spacing: 8,
                 alignment: WrapAlignment.center,
-                children: [
-                  if (filter.types.isNotEmpty)
-                    _filterBadge(
-                      label: 'Tipo: ${filter.types.length}',
-                      onClear: () =>
-                          ref.read(spotFilterProvider.notifier).state =
-                              filter.copyWith(types: const {}),
-                    ),
-                  if (filter.difficulties.isNotEmpty)
-                    _filterBadge(
-                      label: 'Dif: ${filter.difficulties.length}',
-                      onClear: () =>
-                          ref.read(spotFilterProvider.notifier).state =
-                              filter.copyWith(difficulties: const {}),
-                    ),
-                  if (filter.minRating > 0)
-                    _filterBadge(
-                      label: '≥ ${filter.minRating.toStringAsFixed(1)}★',
-                      onClear: () =>
-                          ref.read(spotFilterProvider.notifier).state =
-                              filter.copyWith(minRating: 0),
-                    ),
-                ],
+                children: activeChips,
               ),
             ),
           ),
+          if (spotsAsync.hasError)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 76,
+              left: 16,
+              right: 16,
+              child: Material(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, size: 18),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text('No se pudieron cargar los spots'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        onPressed: () =>
+                            ref.invalidate(approvedSpotsProvider),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 88),
         child: FloatingActionButton.small(
           heroTag: 'recenter',
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.onSurface,
+          elevation: 4,
           onPressed: state.locating ? null : _recenter,
           child: state.locating
               ? const SizedBox(
@@ -305,105 +319,117 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Widget _filterBadge({required String label, required VoidCallback onClear}) {
+  Widget _activeBadge(
+    BuildContext context, {
+    required String label,
+    required VoidCallback onClear,
+  }) {
     return InputChip(
       label: Text(label),
       onDeleted: onClear,
       deleteIcon: const Icon(Icons.close, size: 16),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      elevation: 2,
     );
   }
 }
 
-class _FiltersSheet extends ConsumerWidget {
-  const _FiltersSheet();
+class _ExplorarHeader extends StatelessWidget {
+  const _ExplorarHeader({
+    required this.onFilterTap,
+    required this.filterCount,
+  });
+
+  final VoidCallback onFilterTap;
+  final int filterCount;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(spotFilterProvider);
-    final notifier = ref.read(spotFilterProvider.notifier);
-
-    return SafeArea(
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(18),
+      shadowColor: Colors.black.withValues(alpha: 0.18),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Tipo', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: SpotType.values.map((t) {
-                final selected = filter.types.contains(t);
-                return FilterChip(
-                  label: Text(t.label),
-                  selected: selected,
-                  onSelected: (_) {
-                    final next = <SpotType>{...filter.types};
-                    if (selected) {
-                      next.remove(t);
-                    } else {
-                      next.add(t);
-                    }
-                    notifier.state = filter.copyWith(types: next);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            Text('Dificultad', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: SpotDifficulty.values.map((d) {
-                final selected = filter.difficulties.contains(d);
-                return FilterChip(
-                  label: Text(d.label),
-                  selected: selected,
-                  onSelected: (_) {
-                    final next = <SpotDifficulty>{...filter.difficulties};
-                    if (selected) {
-                      next.remove(d);
-                    } else {
-                      next.add(d);
-                    }
-                    notifier.state = filter.copyWith(difficulties: next);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Rating mínimo: ${filter.minRating.toStringAsFixed(1)}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Slider(
-              value: filter.minRating,
-              min: 0,
-              max: 5,
-              divisions: 10,
-              onChanged: (v) =>
-                  notifier.state = filter.copyWith(minRating: v),
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => notifier.state = const SpotFilter(),
-                    child: const Text('Limpiar'),
+                  child: Text(
+                    'Explorar',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Aplicar'),
+                Material(
+                  color: theme.colorScheme.surface,
+                  shape: const CircleBorder(),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        tooltip: 'Filtros',
+                        icon: const Icon(Icons.tune_rounded),
+                        onPressed: onFilterTap,
+                      ),
+                      if (filterCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                  ),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search,
+                      size: 20,
+                      color: theme.colorScheme.onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Buscar spots',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface
+                            .withValues(alpha: 0.55),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

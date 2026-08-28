@@ -36,7 +36,6 @@ class SpotPeekCard extends StatelessWidget {
                 _Thumbnail(
                   photos: spot.photos,
                   spotId: spot.id,
-                  typeLabel: spot.type.label,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -105,12 +104,10 @@ class _Thumbnail extends StatelessWidget {
   const _Thumbnail({
     required this.photos,
     required this.spotId,
-    required this.typeLabel,
   });
 
   final List<SpotPhoto> photos;
   final String spotId;
-  final String typeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -124,11 +121,11 @@ class _Thumbnail extends StatelessWidget {
           defaultSpotImageFor(spotId),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => Container(
-            color: scheme.surfaceContainerHighest,
+            color: scheme.surfaceContainerHigh,
             child: Icon(
               Icons.image_not_supported_outlined,
               size: 32,
-              color: scheme.onSurfaceVariant,
+              color: scheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -164,7 +161,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -177,7 +174,6 @@ class _Chip extends StatelessWidget {
 
 class _RatingBadge extends StatelessWidget {
   const _RatingBadge({required this.avg, required this.count});
-
   final double avg;
   final int count;
 
@@ -187,21 +183,23 @@ class _RatingBadge extends StatelessWidget {
       return Text(
         'Sin reseñas',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.55),
             ),
       );
     }
     final fmt = NumberFormat('0.0');
     return Row(
       children: [
-        const Icon(Icons.star_rounded, size: 18, color: Colors.amber),
+        const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFBBF24)),
         const SizedBox(width: 2),
         Text(fmt.format(avg)),
         const SizedBox(width: 4),
         Text(
           '($count)',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: 0.55),
               ),
         ),
       ],

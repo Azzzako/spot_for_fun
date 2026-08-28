@@ -1,9 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 
 class SpotListCard extends StatelessWidget {
@@ -25,12 +25,26 @@ class SpotListCard extends StatelessWidget {
     final theme = Theme.of(context);
     final thumbUrl = spot.photos.isNotEmpty ? spot.photos.first.url : null;
     final showBanner = spot.status != SpotStatus.approved;
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+
+    final fallback = ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.asset(
+        defaultSpotImageFor(spot.id),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => Container(
+          color: theme.colorScheme.surfaceContainerHigh,
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
       ),
-      elevation: 1,
+    );
+
+    return Material(
+      color: theme.colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
@@ -38,7 +52,7 @@ class SpotListCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
                   ClipRRect(
@@ -47,36 +61,15 @@ class SpotListCard extends StatelessWidget {
                       width: 80,
                       height: 80,
                       child: thumbUrl != null
-                          ? Image.network(
-                              thumbUrl,
+                          ? CachedNetworkImage(
+                              imageUrl: thumbUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Image.asset(
-                                defaultSpotImageFor(spot.id),
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(
-                                  color: theme
-                                      .colorScheme.surfaceContainerHighest,
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color:
-                                        theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
+                              placeholder: (_, _) => Container(
+                                color: theme.colorScheme.surfaceContainerHigh,
                               ),
+                              errorWidget: (_, _, _) => fallback,
                             )
-                          : Image.asset(
-                              defaultSpotImageFor(spot.id),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                color: theme
-                                    .colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  Icons.image_not_supported_outlined,
-                                  color:
-                                      theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
+                          : fallback,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -84,25 +77,26 @@ class SpotListCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text(
-                      spot.name.toUpperCase(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(
-                        textStyle:
-                            theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                        Text(
+                          spot.name.toUpperCase(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            textStyle:
+                                theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                         const SizedBox(height: 2),
                         Text(
                           spot.type.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -111,12 +105,12 @@ class SpotListCard extends StatelessWidget {
                             const Icon(
                               Icons.star_rounded,
                               size: 18,
-                              color: AppColors.brandGold,
+                              color: Color(0xFFFBBF24),
                             ),
                             const SizedBox(width: 2),
                             Text(
                               spot.ratingsCount == 0
-                                  ? 'Sin resenas'
+                                  ? 'Sin reseñas'
                                   : spot.avgRating.toStringAsFixed(1),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
@@ -127,8 +121,8 @@ class SpotListCard extends StatelessWidget {
                               Text(
                                 '(${spot.ratingsCount})',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onSurfaceVariant,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.55),
                                 ),
                               ),
                             ],
@@ -147,8 +141,9 @@ class SpotListCard extends StatelessWidget {
                             ? Icons.bookmark
                             : Icons.bookmark_border,
                         color: bookmarked
-                            ? AppColors.brandGold
-                            : theme.colorScheme.onSurfaceVariant,
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                       ),
                       onPressed: () =>
                           onBookmarkToggle?.call(!bookmarked),
@@ -178,7 +173,7 @@ class _StatusBanner extends StatelessWidget {
         isRejected ? Icons.cancel_outlined : Icons.hourglass_top;
     final title = isRejected
         ? 'Spot rechazado'
-        : 'En proceso de revision';
+        : 'En proceso de revisión';
     final String subtitle;
     if (isRejected) {
       final reason = spot.rejectReason;
@@ -187,7 +182,7 @@ class _StatusBanner extends StatelessWidget {
           : 'Tu spot no fue aprobado.';
     } else {
       subtitle =
-          'Nuestro equipo lo esta revisando. Te avisaremos cuando este visible.';
+          'Nuestro equipo lo está revisando. Te avisaremos cuando esté visible.';
     }
 
     return Container(
@@ -234,143 +229,6 @@ class _StatusBanner extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({
-    super.key,
-    required this.username,
-    required this.userId,
-    required this.spotsCount,
-    required this.favoritesCount,
-    required this.reviewsCount,
-  });
-
-  final String username;
-  final String userId;
-  final int spotsCount;
-  final int favoritesCount;
-  final int reviewsCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 140,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.asset(
-                defaultSpotImageFor(userId),
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.person,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0x00000000),
-                      Color(0x99000000),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _OverlayStatColumn(
-                        value: spotsCount.toString(), label: 'Spots'),
-                    Container(
-                      width: 1,
-                      height: 28,
-                      color: Colors.white.withValues(alpha: 0.35),
-                    ),
-                    _OverlayStatColumn(
-                        value: favoritesCount.toString(),
-                        label: 'Favoritos'),
-                    Container(
-                      width: 1,
-                      height: 28,
-                      color: Colors.white.withValues(alpha: 0.35),
-                    ),
-                    _OverlayStatColumn(
-                        value: reviewsCount.toString(),
-                        label: 'Resenas'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                username,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _OverlayStatColumn extends StatelessWidget {
-  const _OverlayStatColumn({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
     );
   }
 }

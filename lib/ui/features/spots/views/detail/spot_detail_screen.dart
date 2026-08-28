@@ -9,6 +9,7 @@ import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 
 final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
@@ -26,6 +27,7 @@ class SpotDetailScreen extends ConsumerWidget {
     final asyncSpot = ref.watch(spotByIdProvider(spotId));
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: asyncSpot.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
@@ -64,10 +66,20 @@ class _DetailBody extends ConsumerWidget {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 260,
+          expandedHeight: 280,
           pinned: true,
-          flexibleSpace: FlexibleSpaceBar(
-            background: _PhotoGallery(photos: spot.photos, spotId: spot.id),
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: Colors.white,
+          leading: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.45),
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
           ),
           actions: [
             if (canSeePrivate)
@@ -80,58 +92,116 @@ class _DetailBody extends ConsumerWidget {
                       : theme.colorScheme.tertiaryContainer,
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.45),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.ios_share_rounded,
+                      color: Colors.white),
+                  onPressed: () => _stubAction(context, 'Compartir'),
+                ),
+              ),
+            ),
           ],
+          flexibleSpace: FlexibleSpaceBar(
+            background: _PhotoGallery(photos: spot.photos, spotId: spot.id),
+          ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate.fixed([
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      spot.name.toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        textStyle:
-                            theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
-                        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    spotMarkerPin(
+                      kind: resolveSpotKind(spot),
+                      brightness: theme.brightness,
+                      size: 40,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            spot.name.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              textStyle:
+                                  theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                spot.type.label,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.65),
+                                ),
+                              ),
+                              Text(
+                                '  ·  ',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.4),
+                                ),
+                              ),
+                              Flexible(
+                                child: Text(
+                                  'Ciudad de México',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.65),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  _RatingBadge(
-                    avg: spot.avgRating,
-                    count: spot.ratingsCount,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _ChipText(label: spot.type.label),
-                  const SizedBox(width: 6),
-                  _ChipText(label: spot.difficulty.label),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (spot.bestTime.isNotEmpty) ...[
-                Text('Mejor horario',
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  children: spot.bestTime
-                      .map((t) => _ChipText(label: t.label))
-                      .toList(),
+                    _FavoriteButton(),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                _StatsRow(spot: spot),
+                const SizedBox(height: 18),
+                _ActionRow(spot: spot),
               ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate.fixed([
               if (spot.description.isNotEmpty) ...[
                 Text('Descripción', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 6),
                 Text(spot.description),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+              ],
+              if (spot.bestTime.isNotEmpty) ...[
+                Text('Mejor horario', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: spot.bestTime
+                      .map((t) => _ChipText(label: t.label))
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
               ],
               if (spot.safetyNotes != null && spot.safetyNotes!.isNotEmpty) ...[
                 Text('Notas de seguridad',
@@ -140,7 +210,8 @@ class _DetailBody extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+                    color: theme.colorScheme.errorContainer
+                        .withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -153,7 +224,7 @@ class _DetailBody extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
               ],
               if (spot.rejectReason != null &&
                   spot.rejectReason!.isNotEmpty) ...[
@@ -168,10 +239,10 @@ class _DetailBody extends ConsumerWidget {
                   ),
                   child: Text(spot.rejectReason!),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
               ],
               _MetaRow(spot: spot),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () => _openReportModal(context, ref),
                 icon: const Icon(Icons.flag_outlined),
@@ -182,6 +253,14 @@ class _DetailBody extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  void _stubAction(BuildContext context, String label) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('$label · próximamente')),
+      );
   }
 
   void _openReportModal(BuildContext context, WidgetRef ref) {
@@ -237,6 +316,220 @@ class _DetailBody extends ConsumerWidget {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.spot});
+  final Spot spot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fmt = NumberFormat('0.0');
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatColumn(
+              value: spot.ratingsCount == 0
+                  ? '—'
+                  : fmt.format(spot.avgRating),
+              label: 'Calificación',
+              icon: Icons.star_rounded,
+              iconColor: const Color(0xFFFBBF24),
+            ),
+          ),
+          _Divider(),
+          Expanded(
+            child: _StatColumn(
+              value: spot.ratingsCount.toString(),
+              label: 'Reseñas',
+              icon: Icons.rate_review_rounded,
+            ),
+          ),
+          _Divider(),
+          Expanded(
+            child: _StatColumn(
+              value: '1.2 km',
+              label: 'Distancia',
+              icon: Icons.place_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.iconColor,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: iconColor ?? theme.colorScheme.onSurface),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 36,
+      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({required this.spot});
+  final Spot spot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionButton(
+            icon: Icons.bookmark_border_rounded,
+            label: 'Guardar',
+            onTap: () => _stub(context, 'Guardar'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionButton(
+            icon: Icons.directions_rounded,
+            label: 'Cómo llegar',
+            onTap: () => _stub(context, 'Cómo llegar'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionButton(
+            icon: Icons.ios_share_rounded,
+            label: 'Compartir',
+            onTap: () => _stub(context, 'Compartir'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _stub(BuildContext context, String label) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('$label · próximamente')),
+      );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatefulWidget {
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton> {
+  bool _saved = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IconButton(
+      onPressed: () {
+        setState(() => _saved = !_saved);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(_saved ? 'Guardado' : 'Quitado'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+      },
+      icon: Icon(
+        _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+        color: _saved ? theme.colorScheme.primary : null,
       ),
     );
   }
@@ -305,44 +598,14 @@ class _ChipText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(label, style: Theme.of(context).textTheme.labelMedium),
-    );
-  }
-}
-
-class _RatingBadge extends StatelessWidget {
-  const _RatingBadge({required this.avg, required this.count});
-  final double avg;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    if (count == 0) {
-      return Text(
-        'Sin reseñas',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-      );
-    }
-    final fmt = NumberFormat('0.0');
-    return Row(
-      children: [
-        const Icon(Icons.star_rounded, size: 18, color: Colors.amber),
-        const SizedBox(width: 2),
-        Text(fmt.format(avg)),
-        const SizedBox(width: 4),
-        Text('($count)',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                )),
-      ],
     );
   }
 }
@@ -357,7 +620,8 @@ class _MetaRow extends StatelessWidget {
     return Row(
       children: [
         Icon(Icons.access_time,
-            size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Text('Creado $created',
             style: Theme.of(context).textTheme.bodySmall),

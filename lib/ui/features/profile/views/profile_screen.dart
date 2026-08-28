@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
+import 'package:spot_for_fun/domain/models/profile.dart';
 import 'package:spot_for_fun/ui/features/profile/widgets/profile_mock_data.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -17,9 +17,9 @@ class ProfileScreen extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar sesion'),
+        title: const Text('Cerrar sesión'),
         content: const Text(
-          'Tendras que volver a iniciar sesion para usar la app.',
+          'Tendrás que volver a iniciar sesión para usar la app.',
         ),
         actions: [
           TextButton(
@@ -28,7 +28,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cerrar sesion'),
+            child: const Text('Cerrar sesión'),
           ),
         ],
       ),
@@ -44,165 +44,90 @@ class ProfileScreen extends ConsumerWidget {
     final theme = ref.watch(themeModePrefProvider);
     final profileAsync = ref.watch(currentProfileProvider);
     final mySpotsAsync = ref.watch(mySpotsProvider);
-    final brightness = Theme.of(context).brightness;
-    final background = brightness == Brightness.dark
-        ? Theme.of(context).colorScheme.surface
-        : AppColors.brandCream;
 
     final profile = profileAsync.valueOrNull;
     final mySpots = mySpotsAsync.valueOrNull ?? const <Spot>[];
-    final header = profile == null
-        ? ProfileHeader(
-            username: 'Cargando...',
-            userId: 'guest',
-            spotsCount: 0,
-            favoritesCount: 0,
-            reviewsCount: 0,
-          )
-        : ProfileHeader(
-            username: profile.username,
-            userId: profile.id,
-            spotsCount: mySpots.length,
-            favoritesCount: 0,
-            reviewsCount: 0,
-          );
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: background,
-        appBar: AppBar(
-          backgroundColor: background,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leading: profile == null
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-          actions: [
-            IconButton(
-              tooltip: 'Notificaciones',
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sin notificaciones nuevas')),
-                );
-              },
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _Header(
+              onSettings: () => _openSettings(context, ref, theme),
             ),
-            PopupMenuButton<_OverflowAction>(
-              tooltip: 'Mas opciones',
-              icon: const Icon(Icons.more_vert),
-              onSelected: (action) async {
-                switch (action) {
-                  case _OverflowAction.theme:
-                    final current = theme.mode;
-                    final next = switch (current) {
-                      ThemeModePref.system => ThemeModePref.light,
-                      ThemeModePref.light => ThemeModePref.dark,
-                      ThemeModePref.dark => ThemeModePref.system,
-                    };
-                    await theme.setMode(next);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Tema: ${_themeLabel(next)}')),
-                      );
-                    }
-                    break;
-                  case _OverflowAction.logout:
-                    await _confirmLogout(context, ref);
-                    break;
-                }
-              },
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  value: _OverflowAction.theme,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.brightness_6_outlined),
-                      const SizedBox(width: 12),
-                      Text('Tema: ${_themeLabel(theme.mode)}'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: _OverflowAction.logout,
-                  child: Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.redAccent),
-                      SizedBox(width: 12),
-                      Text('Cerrar sesion'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                labelColor: AppColors.brandForest,
-                unselectedLabelColor:
-                    Theme.of(context).colorScheme.onSurfaceVariant,
-                indicatorColor: AppColors.brandForest,
-                indicatorWeight: 3,
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-                tabs: const [
-                  Tab(text: 'Mis Spots'),
-                  Tab(text: 'Favoritos'),
-                  Tab(text: 'Resenas'),
-                ],
-              ),
-            ),
-          ),
-        ),
-        body: profile == null
-            ? Center(
-                child: profileAsync.isLoading
-                    ? const CircularProgressIndicator()
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
+            Expanded(
+              child: profile == null
+                  ? _ProfileLoadingOrError(
+                      async: profileAsync,
+                      onRetry: () => ref.invalidate(currentProfileProvider),
+                    )
+                  : DefaultTabController(
+                      length: 3,
+                      child: Column(
                         children: [
-                          const Icon(Icons.error_outline,
-                              size: 48, color: Colors.redAccent),
-                          const SizedBox(height: 12),
-                          const Text('No se pudo cargar tu perfil'),
-                          const SizedBox(height: 12),
-                          OutlinedButton(
-                            onPressed: () =>
-                                ref.invalidate(currentProfileProvider),
-                            child: const Text('Reintentar'),
+                          _ProfileHeader(profile: profile, spotCount: mySpots.length),
+                          const _TabsBar(),
+                          Expanded(
+                            child: TabBarView(
+                              children: [
+                                _MySpotsTab(
+                                  asyncSpots: mySpotsAsync,
+                                  spots: mySpots,
+                                  ref: ref,
+                                ),
+                                const _FavoritesTab(),
+                                const _ReviewsTab(),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-              )
-            : Column(
-                children: [
-                  header,
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _MySpotsTab(
-                          asyncSpots: mySpotsAsync,
-                          spots: mySpots,
-                          ref: ref,
-                        ),
-                        const _FavoritesTab(),
-                        const _ReviewsTab(),
-                      ],
                     ),
-                  ),
-                ],
-              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openSettings(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeModePrefNotifier theme,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.brightness_6_outlined),
+              title: Text('Tema: ${_themeLabel(theme.mode)}'),
+              onTap: () async {
+                final next = switch (theme.mode) {
+                  ThemeModePref.system => ThemeModePref.light,
+                  ThemeModePref.light => ThemeModePref.dark,
+                  ThemeModePref.dark => ThemeModePref.system,
+                };
+                await theme.setMode(next);
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text('Cerrar sesión',
+                  style: TextStyle(color: Colors.redAccent)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _confirmLogout(context, ref);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }
@@ -219,7 +144,162 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-enum _OverflowAction { theme, logout }
+class _Header extends StatelessWidget {
+  const _Header({required this.onSettings});
+  final VoidCallback onSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          IconButton(
+            tooltip: 'Ajustes',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: onSettings,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.profile, required this.spotCount});
+  final Profile profile;
+  final int spotCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      child: Column(
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHigh,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.person_outline,
+              size: 44,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            profile.username,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Ciudad de México',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _StatColumn(value: spotCount.toString(), label: 'Spots'),
+              _StatDivider(),
+              const _StatColumn(value: '0', label: 'Guardados'),
+              _StatDivider(),
+              const _StatColumn(value: '0', label: 'Reseñas'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 32,
+      color: Theme.of(context).colorScheme.outline,
+    );
+  }
+}
+
+class _TabsBar extends StatelessWidget {
+  const _TabsBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outline),
+        ),
+      ),
+      child: TabBar(
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
+        labelColor: theme.colorScheme.onSurface,
+        unselectedLabelColor:
+            theme.colorScheme.onSurface.withValues(alpha: 0.55),
+        indicatorColor: theme.colorScheme.primary,
+        indicatorWeight: 3,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 14,
+        ),
+        tabs: const [
+          Tab(text: 'Mis Spots'),
+          Tab(text: 'Favoritos'),
+          Tab(text: 'Reseñas'),
+        ],
+      ),
+    );
+  }
+}
 
 class _MySpotsTab extends StatelessWidget {
   const _MySpotsTab({
@@ -246,14 +326,14 @@ class _MySpotsTab extends StatelessWidget {
     if (spots.isEmpty) {
       return const _EmptyTab(
         icon: Icons.add_location_alt_outlined,
-        title: 'Aun no tienes spots',
-        subtitle: 'Cuando agregues uno aparecera aqui.',
+        title: 'Aún no tienes spots',
+        subtitle: 'Cuando agregues uno aparecerá aquí.',
       );
     }
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(mySpotsProvider),
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         itemCount: spots.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) => SpotListCard(
@@ -272,10 +352,10 @@ class _FavoritesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _EmptyTab(
       icon: Icons.favorite_border,
-      title: 'Favoritos proximamente',
+      title: 'Favoritos próximamente',
       subtitle:
-          'Pronto podras guardar tus spots favoritos aqui. '
-          'La funcion llega en una proxima actualizacion.',
+          'Pronto podrás guardar tus spots favoritos aquí. '
+          'La función llega en una próxima actualización.',
     );
   }
 }
@@ -287,8 +367,8 @@ class _ReviewsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _EmptyTab(
       icon: Icons.rate_review_outlined,
-      title: 'Aun no tienes resenas',
-      subtitle: 'Cuando califiques un spot aparecera aqui.',
+      title: 'Aún no tienes reseñas',
+      subtitle: 'Cuando califiques un spot aparecerá aquí.',
     );
   }
 }
@@ -316,7 +396,7 @@ class _EmptyTab extends StatelessWidget {
             Icon(
               icon,
               size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 12),
             Text(
@@ -330,7 +410,7 @@ class _EmptyTab extends StatelessWidget {
             Text(
               subtitle,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -355,6 +435,31 @@ class _ErrorTab extends StatelessWidget {
           const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
           const SizedBox(height: 12),
           Text(message),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileLoadingOrError extends StatelessWidget {
+  const _ProfileLoadingOrError({required this.async, required this.onRetry});
+  final AsyncValue<dynamic> async;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (async.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+          const SizedBox(height: 12),
+          const Text('No se pudo cargar tu perfil'),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
         ],
