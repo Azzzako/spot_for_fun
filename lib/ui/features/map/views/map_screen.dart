@@ -12,7 +12,6 @@ import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 import 'package:spot_for_fun/ui/features/map/widgets/filters_sheet.dart';
-import 'package:spot_for_fun/ui/features/map/widgets/spot_peek_card.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -122,20 +121,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  Future<void> _showSpotPeek(Spot spot) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (ctx) => SpotPeekCard(
-        spot: spot,
-        onClose: () => Navigator.of(ctx).pop(),
-        onViewDetail: () {
-          Navigator.of(ctx).pop();
-          context.push(AppRoutes.spotDetail(spot.id));
-        },
-      ),
-    );
+  void _openSpotDetail(Spot spot) {
+    context.push(AppRoutes.spotDetail(spot.id));
   }
 
   @override
@@ -223,7 +210,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         alignment: Alignment.topCenter,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => _showSpotPeek(s),
+                          onTap: () => _openSpotDetail(s),
                           child: spotMarkerWidget(
                             kind: kind,
                             brightness: brightness,
