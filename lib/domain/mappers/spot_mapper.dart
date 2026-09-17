@@ -1,9 +1,7 @@
 import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
-import 'package:spot_for_fun/data/models/spot_rating_dto.dart';
 import 'package:spot_for_fun/data/models/spot_report_dto.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/domain/models/spot_report.dart';
 
 extension SpotDtoMapper on SpotDto {
@@ -41,20 +39,6 @@ extension SpotPhotoDtoMapper on SpotPhotoDto {
       spotId: spotId,
       url: url,
       position: position,
-    );
-  }
-}
-
-extension SpotRatingDtoMapper on SpotRatingDto {
-  SpotRating toDomain() {
-    return SpotRating(
-      id: id,
-      spotId: spotId,
-      userId: userId,
-      rating: rating,
-      comment: comment,
-      createdAt: createdAt,
-      userName: userName,
     );
   }
 }

@@ -117,3 +117,20 @@ extension DisplayAsX on DisplayAs {
   }
 }
 
+enum ReviewStatus { pending, approved, rejected }
+
+extension ReviewStatusX on ReviewStatus {
+  String get dbValue => name;
+  String get label => switch (this) {
+        ReviewStatus.pending => 'En revisión',
+        ReviewStatus.approved => 'Aprobada',
+        ReviewStatus.rejected => 'Rechazada',
+      };
+  static ReviewStatus fromDb(Object? raw) {
+    return ReviewStatus.values.firstWhere(
+      (e) => e.dbValue == raw,
+      orElse: () => ReviewStatus.pending,
+    );
+  }
+}
+

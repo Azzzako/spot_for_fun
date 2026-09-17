@@ -4,10 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/repositories/spot_rating_repository.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/domain/models/spot_rating.dart';
+import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
+import 'package:spot_for_fun/ui/features/spots/widgets/write_rating_sheet.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 
@@ -15,6 +20,12 @@ final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
   final repo = ref.watch(spotRepositoryProvider);
   return repo.fetchById(id);
+});
+
+final visibleRatingsProvider = FutureProvider.family
+    .autoDispose<List<SpotRating>, String>((ref, spotId) async {
+  final repo = ref.watch(spotRatingRepositoryProvider);
+  return repo.fetchVisibleForSpot(spotId);
 });
 
 class SpotDetailScreen extends ConsumerWidget {
@@ -188,6 +199,8 @@ class _DetailBody extends ConsumerWidget {
                 _StatsRow(spot: spot),
                 const SizedBox(height: 18),
                 _ActionRow(spot: spot),
+                const SizedBox(height: 18),
+                _RatingCta(spot: spot),
               ],
             ),
           ),
@@ -196,6 +209,7 @@ class _DetailBody extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           sliver: SliverList(
             delegate: SliverChildListDelegate.fixed([
+              _RatingsSection(spotId: spot.id),
               if (spot.description.isNotEmpty) ...[
                 Text('Descripción', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 6),
@@ -637,6 +651,301 @@ class _MetaRow extends StatelessWidget {
         Text('Creado $created',
             style: Theme.of(context).textTheme.bodySmall),
       ],
+    );
+  }
+}
+
+class _RatingCta extends ConsumerStatefulWidget {
+  const _RatingCta({required this.spot});
+  final Spot spot;
+
+  @override
+  ConsumerState<_RatingCta> createState() => _RatingCtaState();
+}
+
+class _RatingCtaState extends ConsumerState<_RatingCta> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(writeRatingViewModelProvider(widget.spot).notifier).hydrate();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final spot = widget.spot;
+    final uid = ref.watch(currentUserIdProvider);
+    if (uid == null) return const SizedBox.shrink();
+    final state = ref.watch(writeRatingViewModelProvider(spot));
+    if (!state.hydrated) {
+      return const SizedBox(
+        height: 52,
+        child: Center(
+          child: SizedBox(
+            height: 22,
+            width: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          ),
+        ),
+      );
+    }
+
+    if (state.isOwnSpot) return const SizedBox.shrink();
+
+    final hasReview = state.hasExisting;
+    final locked = hasReview && !state.canEdit;
+
+    final String label;
+    final IconData icon;
+    if (locked) {
+      label = 'Reseña publicada';
+      icon = Icons.check_circle_outline;
+    } else if (hasReview) {
+      label = 'Editar tu reseña';
+      icon = Icons.edit_outlined;
+    } else {
+      label = 'Dejar reseña';
+      icon = Icons.rate_review_outlined;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 52,
+          child: FilledButton.icon(
+            onPressed: () async {
+              final ok = await WriteRatingSheet.show(context, spot);
+              if (ok == true) {
+                ref.invalidate(visibleRatingsProvider(spot.id));
+              }
+            },
+            icon: Icon(icon),
+            label: Text(label),
+            style: FilledButton.styleFrom(
+              backgroundColor: locked
+                  ? theme.colorScheme.surfaceContainerHigh
+                  : null,
+              foregroundColor: locked
+                  ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                  : null,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        _ProximityHint(state: state),
+      ],
+    );
+  }
+}
+
+class _ProximityHint extends StatelessWidget {
+  const _ProximityHint({required this.state});
+  final WriteRatingState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.isOwnSpot) return const SizedBox.shrink();
+    if (state.hasExisting && !state.canEdit) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    String? text;
+    Color? color;
+
+    switch (state.locationStatus) {
+      case RatingLocationStatus.denied:
+        text = 'Activa el permiso de ubicación para poder dejar una reseña.';
+        color = theme.colorScheme.error;
+      case RatingLocationStatus.serviceOff:
+        text = 'Enciende tu GPS para poder dejar una reseña.';
+        color = theme.colorScheme.error;
+      case RatingLocationStatus.error:
+        text = 'No pudimos obtener tu ubicación. Inténtalo más tarde.';
+        color = theme.colorScheme.error;
+      case RatingLocationStatus.unknown:
+        return const SizedBox.shrink();
+      case RatingLocationStatus.granted:
+        final d = state.distanceMeters;
+        if (d == null) return const SizedBox.shrink();
+        if (state.isNearEnough) {
+          final meters = d.round();
+          text = 'Estás a $meters m del spot · listo para reseñar.';
+        } else {
+          final meters = d.round();
+          text =
+              'Estás a $meters m. Acércate a menos de ${kRatingMaxDistanceMeters.toInt()} m para dejar reseña.';
+        }
+        color = state.isNearEnough
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _RatingsSection extends ConsumerWidget {
+  const _RatingsSection({required this.spotId});
+  final String spotId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final async = ref.watch(visibleRatingsProvider(spotId));
+    final visible = async.valueOrNull ?? const <SpotRating>[];
+
+    if (async.isLoading && visible.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (visible.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'Aún no hay reseñas. ¡Sé el primero en dejar una!',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Reseñas (${visible.length})',
+            style: theme.textTheme.titleSmall),
+        const SizedBox(height: 12),
+        ...visible.map((r) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RatingCard(rating: r),
+            )),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _RatingCard extends StatelessWidget {
+  const _RatingCard({required this.rating});
+  final SpotRating rating;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isPending = rating.status == ReviewStatus.pending;
+    final isRejected = rating.status == ReviewStatus.rejected;
+    final accent = isPending
+        ? theme.colorScheme.tertiaryContainer
+        : isRejected
+            ? theme.colorScheme.errorContainer
+            : null;
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: accent != null ? Border.all(color: accent) : null,
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                child: Icon(
+                  Icons.person_outline,
+                  size: 18,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '@${rating.authorDisplayName}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _Stars(value: rating.rating),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat.yMMMd().format(rating.createdAt),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (isPending || isRejected)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    rating.status.label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (rating.comment != null && rating.comment!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(rating.comment!.trim()),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Stars extends StatelessWidget {
+  const _Stars({required this.value});
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final filled = i < value;
+        return Icon(
+          filled ? Icons.star_rounded : Icons.star_border_rounded,
+          size: 16,
+          color: filled
+              ? const Color(0xFFFBBF24)
+              : Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.3),
+        );
+      }),
     );
   }
 }
