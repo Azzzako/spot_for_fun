@@ -182,11 +182,66 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                       maxLines: 3,
                       maxLength: 500,
                     ),
-                    const SizedBox(height: 12),
-                    _MoreDetailsTile(
-                      state: state,
-                      vm: vm,
-                      safetyCtrl: _safetyCtrl,
+                    const SizedBox(height: 20),
+                    _Label('Nivel'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: SpotDifficulty.values.map((d) {
+                        final selected = state.difficulty == d;
+                        return _TypeChip(
+                          label: d.label,
+                          selected: selected,
+                          onTap: () => vm.setDifficulty(d),
+                        );
+                      }).toList(),
+                    ),
+                    if (state.difficulty == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Selecciona un nivel.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    _Label('Mejor hora para ir'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: BestTimeSlot.values.map((b) {
+                        final selected = state.bestTime.contains(b);
+                        return _TypeChip(
+                          label: b.label,
+                          selected: selected,
+                          onTap: () => vm.toggleBestTime(b),
+                        );
+                      }).toList(),
+                    ),
+                    if (state.bestTime.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Selecciona al menos un horario.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    _Label('Notas de seguridad (opcional)'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _safetyCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Notas de seguridad...',
+                      ),
+                      maxLines: 2,
+                      maxLength: 240,
                     ),
                     if (state.submitState == SubmitState.partialSuccess)
                       _Banner(
@@ -437,88 +492,6 @@ class _TypeChip extends StatelessWidget {
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MoreDetailsTile extends StatelessWidget {
-  const _MoreDetailsTile({
-    required this.state,
-    required this.vm,
-    required this.safetyCtrl,
-  });
-
-  final CreateSpotState state;
-  final CreateSpotViewModel vm;
-  final TextEditingController safetyCtrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Theme(
-      data: theme.copyWith(
-        dividerColor: Colors.transparent,
-        splashColor: Colors.transparent,
-      ),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        childrenPadding: EdgeInsets.zero,
-        iconColor: theme.colorScheme.primary,
-        collapsedIconColor: theme.colorScheme.primary,
-        title: Text(
-          'Más detalles (opcional)',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        children: [
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: SpotDifficulty.values.map((d) {
-              final selected = state.difficulty == d;
-              return _TypeChip(
-                label: d.label,
-                selected: selected,
-                onTap: () => vm.setDifficulty(d),
-              );
-            }).toList(),
-          ),
-          if (state.difficulty == null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Selecciona una dificultad.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: BestTimeSlot.values.map((b) {
-              final selected = state.bestTime.contains(b);
-              return _TypeChip(
-                label: b.label,
-                selected: selected,
-                onTap: () => vm.toggleBestTime(b),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: safetyCtrl,
-            decoration: const InputDecoration(
-              hintText: 'Notas de seguridad...',
-            ),
-            maxLines: 2,
-            maxLength: 240,
-          ),
-        ],
       ),
     );
   }
