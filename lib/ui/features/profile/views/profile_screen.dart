@@ -7,7 +7,7 @@ import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/profile.dart';
-import 'package:spot_for_fun/ui/features/profile/widgets/profile_mock_data.dart';
+import 'package:spot_for_fun/ui/features/spots/widgets/open_spot_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -256,10 +256,7 @@ class _MySpotsTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         itemCount: spots.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => SpotListCard(
-          spot: spots[i],
-          onTap: () => context.push(AppRoutes.spotDetail(spots[i].id)),
-        ),
+        itemBuilder: (_, i) => OpenSpotCard(spot: spots[i]),
       ),
     );
   }
