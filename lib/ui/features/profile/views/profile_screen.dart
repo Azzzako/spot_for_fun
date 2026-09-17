@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
@@ -13,35 +12,8 @@ import 'package:spot_for_fun/ui/features/profile/widgets/profile_mock_data.dart'
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text(
-          'Tendrás que volver a iniciar sesión para usar la app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cerrar sesión'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || !context.mounted) return;
-    await ref.read(authRepositoryProvider).signOut();
-    if (!context.mounted) return;
-    context.go(AppRoutes.login);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = ref.watch(themeModePrefProvider);
     final profileAsync = ref.watch(currentProfileProvider);
     final mySpotsAsync = ref.watch(mySpotsProvider);
 
@@ -54,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           children: [
             _Header(
-              onSettings: () => _openSettings(context, ref, theme),
+              onSettings: () => context.push(AppRoutes.settings),
             ),
             Expanded(
               child: profile == null
@@ -89,58 +61,6 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  void _openSettings(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeModePrefNotifier theme,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.brightness_6_outlined),
-              title: Text('Tema: ${_themeLabel(theme.mode)}'),
-              onTap: () async {
-                final next = switch (theme.mode) {
-                  ThemeModePref.system => ThemeModePref.light,
-                  ThemeModePref.light => ThemeModePref.dark,
-                  ThemeModePref.dark => ThemeModePref.system,
-                };
-                await theme.setMode(next);
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text('Cerrar sesión',
-                  style: TextStyle(color: Colors.redAccent)),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _confirmLogout(context, ref);
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _themeLabel(ThemeModePref pref) {
-    switch (pref) {
-      case ThemeModePref.system:
-        return 'Auto';
-      case ThemeModePref.light:
-        return 'Claro';
-      case ThemeModePref.dark:
-        return 'Oscuro';
-    }
   }
 }
 
@@ -198,7 +118,7 @@ class _ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            profile.username,
+            profile.displayName,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
             ),

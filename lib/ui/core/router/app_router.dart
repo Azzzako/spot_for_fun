@@ -7,7 +7,10 @@ import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/ui/features/auth/views/login_screen.dart';
 import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
+import 'package:spot_for_fun/ui/features/profile/views/edit_profile_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
+import 'package:spot_for_fun/ui/features/settings/views/coming_soon_screen.dart';
+import 'package:spot_for_fun/ui/features/settings/views/settings_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
 import 'package:spot_for_fun/ui/features/shop/views/shop_screen.dart';
 import 'package:spot_for_fun/ui/features/splash/views/splash_screen.dart';
@@ -61,6 +64,12 @@ class AppRoutes {
   static const profile = '/profile';
   static const shop = '/shop';
   static const adminPending = '/admin/pending';
+  static const settings = '/settings';
+  static const settingsEditProfile = '/settings/edit-profile';
+  static const settingsPrivacy = '/settings/privacy';
+  static const settingsNotifications = '/settings/notifications';
+  static const settingsHelp = '/settings/help';
+  static const settingsAbout = '/settings/about';
 
   static String spotDetail(String id) => '/spots/$id';
 }
@@ -163,6 +172,66 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadeThroughPage(
           state: state,
           child: const AdminPendingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsEditProfile,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const EditProfileScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsPrivacy,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Privacidad',
+            icon: Icons.shield_outlined,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsNotifications,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Notificaciones',
+            icon: Icons.notifications_none_outlined,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsHelp,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Ayuda',
+            icon: Icons.help_outline,
+          ),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.settingsAbout,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const ComingSoonScreen(
+            title: 'Acerca de',
+            icon: Icons.info_outline,
+          ),
         ),
       ),
     ],
