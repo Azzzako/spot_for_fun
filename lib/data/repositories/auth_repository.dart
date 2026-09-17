@@ -31,6 +31,8 @@ class AuthRepository {
 
   Future<void> signOut() => _service.signOut();
 
+  Future<void> updateEmail(String newEmail) => _service.updateEmail(newEmail);
+
   Future<void> resendConfirmation(String email) =>
       _service.resendConfirmation(email);
 }

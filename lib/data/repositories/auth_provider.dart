@@ -27,6 +27,14 @@ final currentUserIdProvider = Provider<String?>((ref) {
   );
 });
 
+final currentUserEmailProvider = Provider<String?>((ref) {
+  final state = ref.watch(authStateProvider);
+  return state.maybeWhen(
+    data: (s) => s.session?.user.email,
+    orElse: () => null,
+  );
+});
+
 final currentUserRoleProvider = Provider<UserRole>((ref) {
   final state = ref.watch(authStateProvider);
   return state.maybeWhen(

@@ -33,6 +33,9 @@ class SpotFilter {
   }
 }
 
+const _authorSelect =
+    'author:profiles!spots_author_id_fkey(username, aka, display_as)';
+
 class SpotService {
   SpotService(this._client);
   final SupabaseClient _client;
@@ -40,7 +43,7 @@ class SpotService {
   Future<List<SpotDto>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     var query = _client
         .from('spots')
-        .select('*, spot_photos(*)')
+        .select('*, spot_photos(*), $_authorSelect')
         .eq('status', 'approved');
 
     if (filter.types.isNotEmpty) {
@@ -66,7 +69,7 @@ class SpotService {
   Future<SpotDto> fetchById(String spotId) async {
     final res = await _client
         .from('spots')
-        .select('*, spot_photos(*)')
+        .select('*, spot_photos(*), $_authorSelect')
         .eq('id', spotId)
         .maybeSingle();
     if (res == null) {
@@ -90,7 +93,7 @@ class SpotService {
   Future<List<SpotDto>> fetchByAuthor(String authorId) async {
     final res = await _client
         .from('spots')
-        .select('*, spot_photos(*)')
+        .select('*, spot_photos(*), $_authorSelect')
         .eq('author_id', authorId)
         .order('created_at', ascending: false);
     return (res as List)
@@ -124,7 +127,7 @@ class SpotService {
           'safety_notes': safetyNotes,
           'status': 'pending',
         })
-        .select('*, spot_photos(*)')
+        .select('*, spot_photos(*), $_authorSelect')
         .single();
     return _spotDtoFromRow(res);
   }
@@ -198,8 +201,21 @@ class SpotService {
       ratingsCount: base.ratingsCount,
       createdAt: base.createdAt,
       updatedAt: base.updatedAt,
+      markerKind: base.markerKind,
       photos: photos,
-      authorName: base.authorName,
+      authorDisplayName: _resolveAuthorDisplayName(map['author']),
     );
+  }
+
+  String? _resolveAuthorDisplayName(Object? raw) {
+    if (raw is! Map) return null;
+    final username = raw['username'] as String?;
+    if (username == null || username.isEmpty) return null;
+    final displayAs = DisplayAsX.fromDb(raw['display_as']);
+    if (displayAs == DisplayAs.aka) {
+      final aka = (raw['aka'] as String?)?.trim();
+      if (aka != null && aka.isNotEmpty) return aka;
+    }
+    return username;
   }
 }

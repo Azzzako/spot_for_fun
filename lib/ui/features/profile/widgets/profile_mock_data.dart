@@ -99,6 +99,17 @@ class SpotListCard extends StatelessWidget {
                                 .withValues(alpha: 0.6),
                           ),
                         ),
+                        if (spot.authorDisplayName != null)
+                          Text(
+                            'Por @${spot.authorDisplayName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.55),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         const SizedBox(height: 8),
                         Row(
                           children: [

@@ -54,6 +54,19 @@ class SpotPeekCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (spot.authorDisplayName != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Por @${spot.authorDisplayName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,

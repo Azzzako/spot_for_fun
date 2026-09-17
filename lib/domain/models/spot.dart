@@ -22,7 +22,7 @@ class Spot {
     required this.updatedAt,
     this.markerKind,
     this.photos = const [],
-    this.authorName,
+    this.authorDisplayName,
   });
 
   final String id;
@@ -45,7 +45,7 @@ class Spot {
   final DateTime updatedAt;
   final MarkerKind? markerKind;
   final List<SpotPhoto> photos;
-  final String? authorName;
+  final String? authorDisplayName;
 
   bool get isApproved => status == SpotStatus.approved;
   bool get isPending => status == SpotStatus.pending;
@@ -74,7 +74,7 @@ class Spot {
     DateTime? updatedAt,
     MarkerKind? markerKind,
     List<SpotPhoto>? photos,
-    String? authorName,
+    String? authorDisplayName,
     bool clearMarkerKind = false,
   }) {
     return Spot(
@@ -98,7 +98,7 @@ class Spot {
       updatedAt: updatedAt ?? this.updatedAt,
       markerKind: clearMarkerKind ? null : (markerKind ?? this.markerKind),
       photos: photos ?? this.photos,
-      authorName: authorName ?? this.authorName,
+      authorDisplayName: authorDisplayName ?? this.authorDisplayName,
     );
   }
 }

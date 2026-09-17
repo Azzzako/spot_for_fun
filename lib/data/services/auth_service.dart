@@ -99,6 +99,14 @@ class AuthService {
 
   Future<void> signOut() => _client.auth.signOut();
 
+  Future<void> updateEmail(String newEmail) async {
+    try {
+      await _client.auth.updateUser(UserAttributes(email: newEmail));
+    } on AuthException catch (e) {
+      throw AppAuthException(_mapError(e));
+    }
+  }
+
   Future<void> resendConfirmation(String email) async {
     try {
       await _client.auth.resend(type: OtpType.email, email: email);

@@ -29,7 +29,7 @@ extension SpotDtoMapper on SpotDto {
       updatedAt: updatedAt,
       markerKind: markerKind,
       photos: photos.map((p) => p.toDomain()).toList(growable: false),
-      authorName: authorName,
+      authorDisplayName: authorDisplayName,
     );
   }
 }

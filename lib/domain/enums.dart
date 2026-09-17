@@ -101,3 +101,19 @@ extension MarkerKindX on MarkerKind {
   }
 }
 
+enum DisplayAs { username, aka }
+
+extension DisplayAsX on DisplayAs {
+  String get dbValue => name;
+  String get label => switch (this) {
+        DisplayAs.username => 'Nombre',
+        DisplayAs.aka => 'A.K.A',
+      };
+  static DisplayAs fromDb(Object? raw) {
+    return DisplayAs.values.firstWhere(
+      (e) => e.dbValue == raw,
+      orElse: () => DisplayAs.username,
+    );
+  }
+}
+

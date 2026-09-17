@@ -6,10 +6,13 @@ extension ProfileDtoMapper on ProfileDto {
     return Profile(
       id: id,
       username: username,
+      aka: aka,
+      instagram: instagram,
       avatarUrl: avatarUrl,
       role: role,
       fcmToken: fcmToken,
       createdAt: createdAt,
+      displayAs: displayAs,
     );
   }
 }
