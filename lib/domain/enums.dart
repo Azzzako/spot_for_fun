@@ -134,3 +134,20 @@ extension ReviewStatusX on ReviewStatus {
   }
 }
 
+enum PhotoStatus { pending, approved, rejected }
+
+extension PhotoStatusX on PhotoStatus {
+  String get dbValue => name;
+  String get label => switch (this) {
+        PhotoStatus.pending => 'En revisión',
+        PhotoStatus.approved => 'Aprobada',
+        PhotoStatus.rejected => 'Rechazada',
+      };
+  static PhotoStatus fromDb(Object? raw) {
+    return PhotoStatus.values.firstWhere(
+      (e) => e.dbValue == raw,
+      orElse: () => PhotoStatus.pending,
+    );
+  }
+}
+

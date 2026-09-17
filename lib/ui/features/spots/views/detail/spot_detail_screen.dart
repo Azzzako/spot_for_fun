@@ -12,6 +12,7 @@ import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
+import 'package:spot_for_fun/ui/features/spots/widgets/add_spot_photo_sheet.dart';
 import 'package:spot_for_fun/ui/features/spots/widgets/write_rating_sheet.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
@@ -73,6 +74,10 @@ class _DetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final canSeePrivate = spot.status != SpotStatus.approved;
+    // Photos are fetched separately so Supabase applies the
+    // spot_photos RLS (the embedded select in fetchById doesn't).
+    final photosAsync = ref.watch(spotPhotosVisibleProvider(spot.id));
+    final photos = photosAsync.valueOrNull ?? const <SpotPhoto>[];
 
     return CustomScrollView(
       slivers: [
@@ -103,6 +108,25 @@ class _DetailBody extends ConsumerWidget {
                       : theme.colorScheme.tertiaryContainer,
                 ),
               ),
+            if (_isOwner(ref, spot))
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    tooltip: 'Agregar fotos',
+                    icon: const Icon(Icons.add_a_photo_outlined,
+                        color: Colors.white),
+                    onPressed: () async {
+                      final ok = await AddSpotPhotoSheet.show(context, spot);
+                      if (ok == true && context.mounted) {
+                        ref.invalidate(spotByIdProvider(spot.id));
+                      }
+                    },
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(8),
               child: Material(
@@ -117,7 +141,7 @@ class _DetailBody extends ConsumerWidget {
             ),
           ],
           flexibleSpace: FlexibleSpaceBar(
-            background: _PhotoGallery(photos: spot.photos, spotId: spot.id),
+            background: _PhotoGallery(photos: photos, spotId: spot.id),
           ),
         ),
         SliverToBoxAdapter(
@@ -286,6 +310,11 @@ class _DetailBody extends ConsumerWidget {
       ..showSnackBar(
         SnackBar(content: Text('$label · próximamente')),
       );
+  }
+
+  bool _isOwner(WidgetRef ref, Spot spot) {
+    final uid = ref.read(currentUserIdProvider);
+    return uid != null && uid == spot.authorId;
   }
 
   void _openReportModal(BuildContext context, WidgetRef ref) {
@@ -588,18 +617,58 @@ class _PhotoGallery extends StatelessWidget {
     }
     return PageView.builder(
       itemCount: photos.length,
-      itemBuilder: (_, i) => GestureDetector(
-        onTap: () => _openFullscreen(context, i),
-        child: CachedNetworkImage(
-          imageUrl: photos[i].url,
-          fit: BoxFit.cover,
-          placeholder: (_, _) => Container(color: Colors.black12),
-          errorWidget: (_, _, _) => Image.asset(
-            defaultSpotImageFor('$spotId,$i'),
-            fit: BoxFit.cover,
+      itemBuilder: (_, i) {
+        final photo = photos[i];
+        final pending = photo.photoStatus == PhotoStatus.pending;
+        return GestureDetector(
+          onTap: () => _openFullscreen(context, i),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: photo.url,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(color: Colors.black12),
+                errorWidget: (_, _, _) => Image.asset(
+                  defaultSpotImageFor('$spotId,$i'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              if (pending)
+                Positioned(
+                  left: 12,
+                  bottom: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.hourglass_top,
+                            size: 14, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'En revisión',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

@@ -39,6 +39,9 @@ extension SpotPhotoDtoMapper on SpotPhotoDto {
       spotId: spotId,
       url: url,
       position: position,
+      userId: userId,
+      reviewId: reviewId,
+      photoStatus: photoStatus,
     );
   }
 }

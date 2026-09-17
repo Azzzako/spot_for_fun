@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,9 +6,11 @@ import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
+import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
 
 /// Bottom sheet that creates or edits the current user's [SpotRating]
-/// for the given [spot]. Validations: rating 1-5, comment 5-500 chars.
+/// for the given [spot]. Validations: rating 1-5, comment 5-500 chars,
+/// up to [kRatingMaxPhotos] photos (require moderation).
 class WriteRatingSheet extends ConsumerStatefulWidget {
   const WriteRatingSheet({super.key, required this.spot});
 
@@ -163,6 +166,33 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 18),
+              Text(
+                'Fotos (máx $kRatingMaxPhotos)',
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              if (state.existingPhotos.isNotEmpty) ...[
+                _ExistingPhotosGrid(
+                  photos: state.existingPhotos,
+                  onRemove: (id) {
+                    ref
+                        .read(writeRatingViewModelProvider(widget.spot).notifier)
+                        .removeExistingPhoto(id);
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
+              PhotoPickerGrid(
+                photos: state.newPhotos,
+                maxPhotos:
+                    (kRatingMaxPhotos - state.existingPhotos.length)
+                        .clamp(0, kRatingMaxPhotos),
+                onPhotosChanged: (photos) => ref
+                    .read(writeRatingViewModelProvider(widget.spot).notifier)
+                    .setNewPhotos(photos),
+              ),
               const SizedBox(height: 4),
               _ProximityHintInline(state: state),
             ],
@@ -296,6 +326,90 @@ class _ProximityHintInline extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(text, style: theme.textTheme.bodySmall?.copyWith(color: color)),
+    );
+  }
+}
+
+class _ExistingPhotosGrid extends StatelessWidget {
+  const _ExistingPhotosGrid({
+    required this.photos,
+    required this.onRemove,
+  });
+
+  final List<SpotPhoto> photos;
+  final ValueChanged<String> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (ctx, i) {
+        final photo = photos[i];
+        final pending = photo.photoStatus == PhotoStatus.pending;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: photo.url,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => Container(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                ),
+                errorWidget: (_, _, _) => Container(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  child: const Icon(Icons.broken_image),
+                ),
+              ),
+            ),
+            if (pending)
+              Positioned(
+                left: 4,
+                bottom: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'En revisión',
+                    style: TextStyle(color: Colors.white, fontSize: 10),
+                  ),
+                ),
+              ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Material(
+                color: Colors.black54,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => onRemove(photo.id),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close, size: 16, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

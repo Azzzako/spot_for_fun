@@ -215,6 +215,7 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
             ext: photo.ext,
           );
           await repo.attachSpotPhoto(
+            userId: userId,
             spotId: spot.id,
             url: url,
             position: i,

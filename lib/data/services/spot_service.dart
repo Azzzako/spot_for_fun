@@ -69,7 +69,7 @@ class SpotService {
   Future<SpotDto> fetchById(String spotId) async {
     final res = await _client
         .from('spots')
-        .select('*, spot_photos(*), $_authorSelect')
+        .select('*, $_authorSelect')
         .eq('id', spotId)
         .maybeSingle();
     if (res == null) {
@@ -83,6 +83,20 @@ class SpotService {
         .from('spot_photos')
         .select()
         .eq('spot_id', spotId)
+        .order('position');
+    return (res as List)
+        .cast<Map<String, dynamic>>()
+        .map(SpotPhotoDto.fromMap)
+        .toList(growable: false);
+  }
+
+  /// Photos attached to a given review. Used by the edit-review
+  /// sheet to show the uploader what is already pending / approved.
+  Future<List<SpotPhotoDto>> fetchPhotosForReview(String reviewId) async {
+    final res = await _client
+        .from('spot_photos')
+        .select()
+        .eq('review_id', reviewId)
         .order('position');
     return (res as List)
         .cast<Map<String, dynamic>>()
@@ -149,20 +163,60 @@ class SpotService {
   }
 
   Future<SpotPhotoDto> attachSpotPhoto({
+    required String userId,
     required String spotId,
     required String url,
     required int position,
+    String? reviewId,
+    PhotoStatus photoStatus = PhotoStatus.approved,
   }) async {
     final res = await _client
         .from('spot_photos')
         .insert({
           'spot_id': spotId,
+          'user_id': userId,
+          'review_id': reviewId,
           'url': url,
           'position': position,
+          'photo_status': photoStatus.dbValue,
         })
         .select()
         .single();
     return SpotPhotoDto.fromMap(res);
+  }
+
+  /// Combined upload + insert used by review and spot-author photo
+  /// submissions. Status is forced to 'pending' so the moderator has
+  /// to approve before it becomes visible to everyone.
+  Future<SpotPhotoDto> submitPendingPhoto({
+    required String userId,
+    required String spotId,
+    required Uint8List bytes,
+    required String ext,
+    String? reviewId,
+    required int position,
+  }) async {
+    final filename =
+        '${DateTime.now().microsecondsSinceEpoch}_${position.toString().padLeft(2, '0')}.$ext';
+    final url = await uploadSpotPhoto(
+      userId: userId,
+      spotId: spotId,
+      filename: filename,
+      ext: ext,
+      bytes: bytes,
+    );
+    return attachSpotPhoto(
+      userId: userId,
+      spotId: spotId,
+      url: url,
+      position: position,
+      reviewId: reviewId,
+      photoStatus: PhotoStatus.pending,
+    );
+  }
+
+  Future<void> deleteSpotPhoto(String photoId) async {
+    await _client.from('spot_photos').delete().eq('id', photoId);
   }
 
   Future<void> reportSpot({

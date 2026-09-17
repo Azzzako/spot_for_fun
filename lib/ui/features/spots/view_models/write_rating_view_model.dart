@@ -4,10 +4,12 @@ import 'package:latlong2/latlong.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/spot_rating_repository.dart';
+import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
+import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
 
 enum WriteRatingStatus { idle, loading, saving, success, error }
 
@@ -20,6 +22,7 @@ enum RatingLocationStatus {
 }
 
 const double kRatingMaxDistanceMeters = 500;
+const int kRatingMaxPhotos = 2;
 
 @immutable
 class WriteRatingState {
@@ -29,6 +32,9 @@ class WriteRatingState {
     this.originalRating = 0,
     this.originalComment = '',
     this.existing,
+    this.existingPhotos = const [],
+    this.newPhotos = const [],
+    this.removedExistingIds = const [],
     this.hydrated = false,
     this.status = WriteRatingStatus.idle,
     this.errorMessage,
@@ -42,6 +48,9 @@ class WriteRatingState {
   final int originalRating;
   final String originalComment;
   final SpotRating? existing;
+  final List<SpotPhoto> existingPhotos;
+  final List<PhotoItem> newPhotos;
+  final List<String> removedExistingIds;
   final bool hydrated;
   final WriteRatingStatus status;
   final String? errorMessage;
@@ -63,7 +72,10 @@ class WriteRatingState {
   bool get isSaving => status == WriteRatingStatus.saving;
 
   bool get hasChanges =>
-      rating != originalRating || comment.trim() != originalComment.trim();
+      rating != originalRating ||
+      comment.trim() != originalComment.trim() ||
+      newPhotos.isNotEmpty ||
+      removedExistingIds.isNotEmpty;
 
   /// True when the user has a known location and is within range of the
   /// spot. False otherwise (no permission, no fix, or too far).
@@ -82,12 +94,19 @@ class WriteRatingState {
     return isNearEnough;
   }
 
+  /// Total photos the user is keeping (existing + new), used to
+  /// enforce the 2-photo limit per review.
+  int get totalPhotos => existingPhotos.length + newPhotos.length;
+
   WriteRatingState copyWith({
     int? rating,
     String? comment,
     int? originalRating,
     String? originalComment,
     SpotRating? existing,
+    List<SpotPhoto>? existingPhotos,
+    List<PhotoItem>? newPhotos,
+    List<String>? removedExistingIds,
     bool? hydrated,
     WriteRatingStatus? status,
     String? errorMessage,
@@ -104,6 +123,9 @@ class WriteRatingState {
       originalRating: originalRating ?? this.originalRating,
       originalComment: originalComment ?? this.originalComment,
       existing: clearExisting ? null : (existing ?? this.existing),
+      existingPhotos: existingPhotos ?? this.existingPhotos,
+      newPhotos: newPhotos ?? this.newPhotos,
+      removedExistingIds: removedExistingIds ?? this.removedExistingIds,
       hydrated: hydrated ?? this.hydrated,
       status: status ?? this.status,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -137,6 +159,16 @@ class WriteRatingViewModel
             return repo.fetchMine(spot.id);
           });
 
+    List<SpotPhoto> existingPhotos = const [];
+    if (mine != null) {
+      try {
+        final spotRepo = ref.read(spotRepositoryProvider);
+        existingPhotos = await spotRepo.fetchPhotosForReview(mine.id);
+      } catch (_) {
+        existingPhotos = const [];
+      }
+    }
+
     final location = await _resolveLocation();
 
     state = state.copyWith(
@@ -147,6 +179,7 @@ class WriteRatingViewModel
       comment: mine?.comment ?? state.comment,
       originalRating: mine?.rating ?? 0,
       originalComment: mine?.comment ?? '',
+      existingPhotos: existingPhotos,
       locationStatus: location.$1,
       distanceMeters: location.$2,
       clearDistance: location.$2 == null,
@@ -187,6 +220,25 @@ class WriteRatingViewModel
       state = state.copyWith(rating: v, clearError: true);
   void setComment(String v) =>
       state = state.copyWith(comment: v, clearError: true);
+  void setNewPhotos(List<PhotoItem> v) =>
+      state = state.copyWith(newPhotos: v, clearError: true);
+
+  void removeExistingPhoto(String photoId) {
+    state = state.copyWith(
+      removedExistingIds: [...state.removedExistingIds, photoId],
+      existingPhotos: state.existingPhotos
+          .where((p) => p.id != photoId)
+          .toList(growable: false),
+    );
+  }
+
+  void undoRemoveExistingPhoto(SpotPhoto photo) {
+    state = state.copyWith(
+      removedExistingIds:
+          state.removedExistingIds.where((id) => id != photo.id).toList(),
+      existingPhotos: [...state.existingPhotos, photo],
+    );
+  }
 
   String? _validate() {
     if (state.rating < 1 || state.rating > 5) {
@@ -195,6 +247,9 @@ class WriteRatingViewModel
     final t = state.comment.trim();
     if (t.length < 5) return 'El comentario necesita al menos 5 caracteres';
     if (t.length > 500) return 'Máximo 500 caracteres';
+    if (state.totalPhotos > kRatingMaxPhotos) {
+      return 'Máximo $kRatingMaxPhotos fotos por reseña';
+    }
     return null;
   }
 
@@ -239,27 +294,57 @@ class WriteRatingViewModel
       return state;
     }
 
+    final spotRepo = ref.read(spotRepositoryProvider);
+    final ratingRepo = ref.read(spotRatingRepositoryProvider);
+
     try {
-      final repo = ref.read(spotRatingRepositoryProvider);
+      // 1. Delete removed existing photos (RLS: only pending, only own).
+      for (final id in state.removedExistingIds) {
+        try {
+          await spotRepo.deleteSpotPhoto(id);
+        } catch (_) {
+          // best-effort: a photo may already be approved, ignore
+        }
+      }
+
+      // 2. Create or update the rating.
       final SpotRating result;
       if (state.existing != null) {
-        result = await repo.update(
+        result = await ratingRepo.update(
           id: state.existing!.id,
           rating: state.rating,
           comment: state.comment.trim(),
         );
       } else {
-        result = await repo.create(
+        result = await ratingRepo.create(
           spotId: spot.id,
           userId: uid,
           rating: state.rating,
           comment: state.comment.trim(),
         );
       }
+
+      // 3. Upload new photos tied to the resulting review id.
+      final photos = state.newPhotos;
+      for (var i = 0; i < photos.length; i++) {
+        final photo = photos[i];
+        if (photo.source != PhotoSource.file) continue;
+        await spotRepo.submitPendingPhoto(
+          userId: uid,
+          spotId: spot.id,
+          bytes: photo.bytes!,
+          ext: photo.ext,
+          reviewId: result.id,
+          position: i,
+        );
+      }
+
       state = state.copyWith(
         existing: result,
         originalRating: result.rating,
         originalComment: result.comment ?? '',
+        newPhotos: const [],
+        removedExistingIds: const [],
         status: WriteRatingStatus.success,
       );
       return state;

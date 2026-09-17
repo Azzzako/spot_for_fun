@@ -109,24 +109,36 @@ class SpotPhoto {
     required this.spotId,
     required this.url,
     required this.position,
+    this.userId,
+    this.reviewId,
+    this.photoStatus = PhotoStatus.pending,
   });
 
   final String id;
   final String spotId;
   final String url;
   final int position;
+  final String? userId;
+  final String? reviewId;
+  final PhotoStatus photoStatus;
 
   SpotPhoto copyWith({
     String? id,
     String? spotId,
     String? url,
     int? position,
+    String? userId,
+    String? reviewId,
+    PhotoStatus? photoStatus,
   }) {
     return SpotPhoto(
       id: id ?? this.id,
       spotId: spotId ?? this.spotId,
       url: url ?? this.url,
       position: position ?? this.position,
+      userId: userId ?? this.userId,
+      reviewId: reviewId ?? this.reviewId,
+      photoStatus: photoStatus ?? this.photoStatus,
     );
   }
 }
