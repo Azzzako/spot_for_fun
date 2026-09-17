@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
-import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
@@ -12,7 +10,7 @@ import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 import 'package:spot_for_fun/ui/features/map/widgets/filters_sheet.dart';
-import 'package:spot_for_fun/ui/features/map/widgets/spot_peek_card.dart';
+import 'package:spot_for_fun/ui/features/spots/widgets/open_spot_card.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -126,14 +124,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (ctx) => SpotPeekCard(
-        spot: spot,
-        onClose: () => Navigator.of(ctx).pop(),
-        onViewDetail: () {
-          Navigator.of(ctx).pop();
-          context.push(AppRoutes.spotDetail(spot.id));
-        },
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: OpenSpotCard(spot: spot),
       ),
     );
   }
