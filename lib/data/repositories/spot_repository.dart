@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/repositories/social_repository.dart';
 import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 import 'package:spot_for_fun/domain/enums.dart';
@@ -18,29 +19,54 @@ class SpotRepository {
   final SpotService _service;
   final SupabaseClient _client;
 
-  Future<List<Spot>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
+  Future<List<Spot>> fetchApproved({
+    SpotFilter filter = const SpotFilter(),
+    Set<String> likedIds = const {},
+    Set<String> favoritedIds = const {},
+  }) async {
     final dtos = await _service.fetchApproved(filter: filter);
-    return _withVisiblePhotos(dtos);
+    return _hydrate(dtos, likedIds, favoritedIds);
   }
 
-  Future<List<Spot>> fetchByAuthor(String authorId) async {
+  Future<List<Spot>> fetchByAuthor(
+    String authorId, {
+    Set<String> likedIds = const {},
+    Set<String> favoritedIds = const {},
+  }) async {
     final dtos = await _service.fetchByAuthor(authorId);
-    return _withVisiblePhotos(dtos);
+    return _hydrate(dtos, likedIds, favoritedIds);
   }
 
-  Future<List<Spot>> _withVisiblePhotos(List<SpotDto> dtos) async {
+  Future<List<Spot>> _hydrate(
+    List<SpotDto> dtos,
+    Set<String> likedIds,
+    Set<String> favoritedIds,
+  ) async {
     return Future.wait(
       dtos.map((dto) async {
         final spot = dto.toDomain();
         final photos = await fetchVisiblePhotos(spot.id);
-        return spot.copyWith(photos: photos);
+        return spot.copyWith(
+          photos: photos,
+          isLiked: likedIds.contains(spot.id),
+          isFavorited: favoritedIds.contains(spot.id),
+        );
       }),
     );
   }
 
-  Future<Spot> fetchById(String spotId) async {
+  Future<Spot> fetchById(
+    String spotId, {
+    Set<String> likedIds = const {},
+    Set<String> favoritedIds = const {},
+  }) async {
     final dto = await _service.fetchById(spotId);
-    return dto.toDomain();
+    final photos = await fetchVisiblePhotos(spotId);
+    return dto.toDomain().copyWith(
+          photos: photos,
+          isLiked: likedIds.contains(spotId),
+          isFavorited: favoritedIds.contains(spotId),
+        );
   }
 
   Future<List<SpotPhoto>> fetchPhotos(String spotId) async {
@@ -88,6 +114,15 @@ class SpotRepository {
         .toList();
 
     return [...approved, ...ownPending];
+  }
+
+  /// Hydrates Spot cards from a list of favorited spot ids. Photos
+  /// are loaded per-spot and the favorited flag is stamped on each
+  /// (liked is left at its fetched default — out of scope here).
+  Future<List<Spot>> fetchFavoritedSpots(List<String> spotIds) async {
+    if (spotIds.isEmpty) return const [];
+    final dtos = await _service.fetchByIds(spotIds);
+    return _hydrate(dtos, const {}, spotIds.toSet());
   }
 
   Future<void> reportSpot({
@@ -203,7 +238,13 @@ final spotRepositoryProvider = Provider<SpotRepository>((ref) {
 final approvedSpotsProvider = FutureProvider<List<Spot>>((ref) async {
   final repo = ref.watch(spotRepositoryProvider);
   final filter = ref.watch(spotFilterProvider);
-  return repo.fetchApproved(filter: filter);
+  final likes = await ref.watch(myLikedSpotIdsProvider.future);
+  final favs = await ref.watch(myFavoritedSpotIdsProvider.future);
+  return repo.fetchApproved(
+    filter: filter,
+    likedIds: likes,
+    favoritedIds: favs,
+  );
 });
 
 final mySpotsProvider =
@@ -211,7 +252,13 @@ final mySpotsProvider =
   final uid = ref.watch(currentUserIdProvider);
   if (uid == null) return const [];
   final repo = ref.watch(spotRepositoryProvider);
-  return repo.fetchByAuthor(uid);
+  final likes = await ref.watch(myLikedSpotIdsProvider.future);
+  final favs = await ref.watch(myFavoritedSpotIdsProvider.future);
+  return repo.fetchByAuthor(
+    uid,
+    likedIds: likes,
+    favoritedIds: favs,
+  );
 });
 
 /// Photos visible to the current user on a given spot: every
@@ -222,4 +269,13 @@ final spotPhotosVisibleProvider = FutureProvider.family
     .autoDispose<List<SpotPhoto>, String>((ref, spotId) async {
   final repo = ref.watch(spotRepositoryProvider);
   return repo.fetchVisiblePhotos(spotId);
+});
+
+/// Spots the current user has favorited. Backed by the
+/// [myFavoritedSpotIdsProvider] so toggles invalidate the list.
+final myFavoriteSpotsProvider =
+    FutureProvider.autoDispose<List<Spot>>((ref) async {
+  final repo = ref.watch(spotRepositoryProvider);
+  final ids = await ref.watch(myFavoritedSpotIdsProvider.future);
+  return repo.fetchFavoritedSpots(ids.toList());
 });

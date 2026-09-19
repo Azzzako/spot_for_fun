@@ -23,6 +23,8 @@ extension SpotDtoMapper on SpotDto {
       approvedAt: approvedAt,
       avgRating: avgRating,
       ratingsCount: ratingsCount,
+      likesCount: likesCount,
+      favoritesCount: favoritesCount,
       createdAt: createdAt,
       updatedAt: updatedAt,
       markerKind: markerKind,

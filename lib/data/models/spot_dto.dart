@@ -19,6 +19,8 @@ class SpotDto {
     this.approvedAt,
     required this.avgRating,
     required this.ratingsCount,
+    required this.likesCount,
+    required this.favoritesCount,
     required this.createdAt,
     required this.updatedAt,
     this.markerKind,
@@ -42,6 +44,8 @@ class SpotDto {
   final DateTime? approvedAt;
   final double avgRating;
   final int ratingsCount;
+  final int likesCount;
+  final int favoritesCount;
   final DateTime createdAt;
   final DateTime updatedAt;
   final MarkerKind? markerKind;
@@ -72,6 +76,8 @@ class SpotDto {
           : DateTime.parse(map['approved_at'] as String),
       avgRating: (map['avg_rating'] as num?)?.toDouble() ?? 0,
       ratingsCount: (map['ratings_count'] as num?)?.toInt() ?? 0,
+      likesCount: (map['likes_count'] as num?)?.toInt() ?? 0,
+      favoritesCount: (map['favorites_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
       markerKind: map['marker_kind'] == null
