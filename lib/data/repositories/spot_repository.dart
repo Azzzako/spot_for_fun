@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/models/spot_dto.dart';
 import 'package:spot_for_fun/data/models/spot_photo_dto.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/mappers/spot_mapper.dart';
@@ -19,12 +20,22 @@ class SpotRepository {
 
   Future<List<Spot>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     final dtos = await _service.fetchApproved(filter: filter);
-    return dtos.map((d) => d.toDomain()).toList(growable: false);
+    return _withVisiblePhotos(dtos);
   }
 
   Future<List<Spot>> fetchByAuthor(String authorId) async {
     final dtos = await _service.fetchByAuthor(authorId);
-    return dtos.map((d) => d.toDomain()).toList(growable: false);
+    return _withVisiblePhotos(dtos);
+  }
+
+  Future<List<Spot>> _withVisiblePhotos(List<SpotDto> dtos) async {
+    return Future.wait(
+      dtos.map((dto) async {
+        final spot = dto.toDomain();
+        final photos = await fetchVisiblePhotos(spot.id);
+        return spot.copyWith(photos: photos);
+      }),
+    );
   }
 
   Future<Spot> fetchById(String spotId) async {

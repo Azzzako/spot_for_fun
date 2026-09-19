@@ -66,6 +66,9 @@ class _SpotPhotoViewerScreenState extends State<SpotPhotoViewerScreen> {
                     photo: photo,
                     spotId: widget.spotId,
                     index: i,
+                    heroTag: i == widget.initialIndex
+                        ? 'spot-photo-${widget.spotId}-${widget.initialIndex}'
+                        : null,
                   );
                 },
               ),
@@ -185,16 +188,34 @@ class _PhotoPage extends StatelessWidget {
     required this.photo,
     required this.spotId,
     required this.index,
+    this.heroTag,
   });
 
   final SpotPhoto photo;
   final String spotId;
   final int index;
+  final String? heroTag;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final pending = photo.photoStatus == PhotoStatus.pending;
+
+    final image = CachedNetworkImage(
+      imageUrl: photo.url,
+      fit: BoxFit.contain,
+      placeholder: (_, _) => const Center(
+        child: CircularProgressIndicator(strokeWidth: 2.4),
+      ),
+      errorWidget: (_, _, _) => Image.asset(
+        defaultSpotImageFor('$spotId,$index'),
+        fit: BoxFit.contain,
+      ),
+    );
+
+    final heroWrapped = heroTag != null
+        ? Hero(tag: heroTag!, child: image)
+        : image;
 
     // InteractiveViewer constrained to horizontal axis so the parent
     // PageView can keep panning between photos while the user can
@@ -209,19 +230,7 @@ class _PhotoPage extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           ColoredBox(color: scheme.surface),
-          Center(
-            child: CachedNetworkImage(
-              imageUrl: photo.url,
-              fit: BoxFit.contain,
-              placeholder: (_, _) => const Center(
-                child: CircularProgressIndicator(strokeWidth: 2.4),
-              ),
-              errorWidget: (_, _, _) => Image.asset(
-                defaultSpotImageFor('$spotId,$index'),
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
+          Center(child: heroWrapped),
           if (pending)
             Align(
               alignment: Alignment.bottomCenter,

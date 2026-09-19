@@ -599,16 +599,19 @@ class _PhotoGallery extends StatelessWidget {
     if (photos.isEmpty) {
       return GestureDetector(
         onTap: () => _openFullscreen(context, 0),
-        child: Image.asset(
-          defaultSpotImageFor(spotId),
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => Container(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Center(
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                size: 48,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+        child: Hero(
+          tag: _heroTag(spotId, 0),
+          child: Image.asset(
+            defaultSpotImageFor(spotId),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -625,13 +628,16 @@ class _PhotoGallery extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
-                imageUrl: photo.url,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: Colors.black12),
-                errorWidget: (_, _, _) => Image.asset(
-                  defaultSpotImageFor('$spotId,$i'),
+              Hero(
+                tag: _heroTag(spotId, i),
+                child: CachedNetworkImage(
+                  imageUrl: photo.url,
                   fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(color: Colors.black12),
+                  errorWidget: (_, _, _) => Image.asset(
+                    defaultSpotImageFor('$spotId,$i'),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               if (pending)
@@ -673,17 +679,26 @@ class _PhotoGallery extends StatelessWidget {
   }
 
   void _openFullscreen(BuildContext context, int index) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      barrierDismissible: true,
-      builder: (_) => SpotPhotoViewerScreen(
-        photos: photos,
-        initialIndex: index,
-        spotId: spotId,
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black87,
+        barrierDismissible: true,
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 280),
+        pageBuilder: (_, _, _) => SpotPhotoViewerScreen(
+          photos: photos,
+          initialIndex: index,
+          spotId: spotId,
+        ),
+        transitionsBuilder: (_, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
       ),
     );
   }
+
+  static String _heroTag(String spotId, int index) =>
+      'spot-photo-$spotId-$index';
 }
 
 class _ChipText extends StatelessWidget {
@@ -762,7 +777,33 @@ class _RatingCtaState extends ConsumerState<_RatingCta> {
       );
     }
 
-    if (state.isOwnSpot) return const SizedBox.shrink();
+    if (state.isOwnSpot) {
+      return Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.edit_note_outlined,
+              size: 20,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Eres el autor de este spot',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     final hasReview = state.hasExisting;
     final locked = hasReview && !state.canEdit;

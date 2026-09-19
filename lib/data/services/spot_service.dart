@@ -43,7 +43,7 @@ class SpotService {
   Future<List<SpotDto>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
     var query = _client
         .from('spots')
-        .select('*, spot_photos(*), $_authorSelect')
+        .select('*, $_authorSelect')
         .eq('status', 'approved');
 
     if (filter.types.isNotEmpty) {
@@ -107,7 +107,7 @@ class SpotService {
   Future<List<SpotDto>> fetchByAuthor(String authorId) async {
     final res = await _client
         .from('spots')
-        .select('*, spot_photos(*), $_authorSelect')
+        .select('*, $_authorSelect')
         .eq('author_id', authorId)
         .order('created_at', ascending: false);
     return (res as List)
