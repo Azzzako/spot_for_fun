@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:spot_for_fun/data/models/profile_dto.dart';
@@ -45,5 +47,51 @@ class ProfileService {
     }
     final res = await query.maybeSingle();
     return res != null;
+  }
+
+  /// Uploads bytes to the `avatars` bucket under `<uid>.<ext>` and
+  /// writes the public URL into profiles.avatar_url. Returns the
+  /// updated profile. Throws if the bucket is missing or the user is
+  /// not signed in.
+  Future<ProfileDto> uploadAvatar({
+    required String uid,
+    required Uint8List bytes,
+    required String ext,
+  }) async {
+    final path = '$uid.$ext';
+    await _client.storage.from('avatars').uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: 'image/$ext', upsert: true),
+        );
+    final url = _client.storage.from('avatars').getPublicUrl(path);
+    final res = await _client
+        .from('profiles')
+        .update({'avatar_url': url})
+        .eq('id', uid)
+        .select()
+        .single();
+    return ProfileDto.fromMap(res);
+  }
+
+  /// Removes the avatar from storage (best-effort) and clears
+  /// profiles.avatar_url.
+  Future<ProfileDto> clearAvatar(String uid) async {
+    final existing = await fetchById(uid);
+    final url = existing?.avatarUrl;
+    if (url != null && url.isNotEmpty) {
+      try {
+        await _client.storage.from('avatars').remove([url]);
+      } catch (_) {
+        // Object may already be gone; ignore and continue.
+      }
+    }
+    final res = await _client
+        .from('profiles')
+        .update({'avatar_url': null})
+        .eq('id', uid)
+        .select()
+        .single();
+    return ProfileDto.fromMap(res);
   }
 }
