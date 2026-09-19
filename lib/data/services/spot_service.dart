@@ -78,6 +78,20 @@ class SpotService {
     return _spotDtoFromRow(res);
   }
 
+  /// Bulk fetch spots by id. Used by the favorites tab to hydrate
+  /// spot cards from a list of favorited ids.
+  Future<List<SpotDto>> fetchByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final res = await _client
+        .from('spots')
+        .select('*, $_authorSelect')
+        .inFilter('id', ids);
+    return (res as List)
+        .cast<Map<String, dynamic>>()
+        .map(_spotDtoFromRow)
+        .toList(growable: false);
+  }
+
   Future<List<SpotPhotoDto>> fetchPhotos(String spotId) async {
     final res = await _client
         .from('spot_photos')
@@ -253,6 +267,8 @@ class SpotService {
       approvedAt: base.approvedAt,
       avgRating: base.avgRating,
       ratingsCount: base.ratingsCount,
+      likesCount: (map['likes_count'] as num?)?.toInt() ?? 0,
+      favoritesCount: (map['favorites_count'] as num?)?.toInt() ?? 0,
       createdAt: base.createdAt,
       updatedAt: base.updatedAt,
       markerKind: base.markerKind,

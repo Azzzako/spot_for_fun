@@ -260,23 +260,59 @@ class _MySpotsTab extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         itemCount: spots.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => OpenSpotCard(spot: spots[i]),
+        itemBuilder: (_, i) {
+          final s = spots[i];
+          return OpenSpotCard(
+            spot: s,
+            liked: s.isLiked,
+            bookmarked: s.isFavorited,
+          );
+        },
       ),
     );
   }
 }
 
-class _FavoritesTab extends StatelessWidget {
+class _FavoritesTab extends ConsumerWidget {
   const _FavoritesTab();
 
   @override
-  Widget build(BuildContext context) {
-    return const _EmptyTab(
-      icon: Icons.favorite_border,
-      title: 'Favoritos próximamente',
-      subtitle:
-          'Pronto podrás guardar tus spots favoritos aquí. '
-          'La función llega en una próxima actualización.',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myFavoriteSpotsProvider);
+    final spots = async.valueOrNull ?? const <Spot>[];
+
+    if (async.isLoading && spots.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (async.hasError && spots.isEmpty) {
+      return _ErrorTab(
+        message: 'No se pudieron cargar tus favoritos',
+        onRetry: () => ref.invalidate(myFavoriteSpotsProvider),
+      );
+    }
+    if (spots.isEmpty) {
+      return const _EmptyTab(
+        icon: Icons.favorite_border,
+        title: 'Aún no tienes favoritos',
+        subtitle:
+            'Toca el ícono de marcador en un spot para guardarlo aquí.',
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(myFavoriteSpotsProvider),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        itemCount: spots.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, i) {
+          final s = spots[i];
+          return OpenSpotCard(
+            spot: s,
+            liked: s.isLiked,
+            bookmarked: s.isFavorited,
+          );
+        },
+      ),
     );
   }
 }

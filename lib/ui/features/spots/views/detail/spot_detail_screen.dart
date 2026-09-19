@@ -318,59 +318,117 @@ class _DetailBody extends ConsumerWidget {
   }
 
   void _openReportModal(BuildContext context, WidgetRef ref) {
-    final ctrl = TextEditingController();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          left: 20,
-          right: 20,
-          top: 8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Reportar este spot',
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Cuéntale al equipo por qué este spot no debería estar visible.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ctrl,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Motivo',
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () async {
-                if (ctrl.text.trim().isEmpty) return;
-                await ref.read(spotRepositoryProvider).reportSpot(
-                      spotId: spot.id,
-                      reason: ctrl.text.trim(),
-                    );
-                if (ctx.mounted) Navigator.of(ctx).pop();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reporte enviado. Gracias.')),
-                  );
-                }
-              },
-              child: const Text('Enviar reporte'),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+      builder: (ctx) => _ReportSheet(spotId: spot.id, parentContext: context),
+    );
+  }
+}
+
+class _ReportCategory {
+  const _ReportCategory(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+const _reportCategories = <_ReportCategory>[
+  _ReportCategory('Spam / publicidad', 'spam'),
+  _ReportCategory('Información incorrecta', 'wrong_info'),
+  _ReportCategory('Contenido ofensivo', 'offensive'),
+  _ReportCategory('Ya no existe', 'gone'),
+  _ReportCategory('Otro', 'other'),
+];
+
+class _ReportSheet extends StatefulWidget {
+  const _ReportSheet({required this.spotId, required this.parentContext});
+  final String spotId;
+  final BuildContext parentContext;
+
+  @override
+  State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  final _detailsCtrl = TextEditingController();
+  _ReportCategory? _selected;
+
+  @override
+  void dispose() {
+    _detailsCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 20,
+        right: 20,
+        top: 8,
       ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Reportar este spot',
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Elige un motivo. Opcionalmente añade detalles.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _reportCategories.map((c) {
+              final isSel = c == _selected;
+              return ChoiceChip(
+                label: Text(c.label),
+                selected: isSel,
+                onSelected: (_) => setState(() => _selected = c),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _detailsCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Detalles (opcional)',
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _selected == null ? null : _submit,
+            child: const Text('Enviar reporte'),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final cat = _selected;
+    if (cat == null) return;
+    final details = _detailsCtrl.text.trim();
+    final reason = details.isEmpty ? cat.label : '${cat.label}: $details';
+    final repo = ProviderScope.containerOf(context).read(spotRepositoryProvider);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(widget.parentContext);
+    await repo.reportSpot(spotId: widget.spotId, reason: reason);
+    navigator.pop();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Reporte enviado. Gracias.')),
     );
   }
 }

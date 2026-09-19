@@ -18,11 +18,15 @@ class Spot {
     this.approvedAt,
     required this.avgRating,
     required this.ratingsCount,
+    required this.likesCount,
+    required this.favoritesCount,
     required this.createdAt,
     required this.updatedAt,
     this.markerKind,
     this.photos = const [],
     this.authorDisplayName,
+    this.isLiked = false,
+    this.isFavorited = false,
   });
 
   final String id;
@@ -41,11 +45,22 @@ class Spot {
   final DateTime? approvedAt;
   final double avgRating;
   final int ratingsCount;
+  final int likesCount;
+  final int favoritesCount;
   final DateTime createdAt;
   final DateTime updatedAt;
   final MarkerKind? markerKind;
   final List<SpotPhoto> photos;
   final String? authorDisplayName;
+
+  /// True when the current user has liked this spot. Set by the
+  /// repository when the spot list is hydrated; falls back to false
+  /// for anonymous viewers.
+  final bool isLiked;
+
+  /// True when the current user has favorited this spot. Same
+  /// hydration rules as [isLiked].
+  final bool isFavorited;
 
   bool get isApproved => status == SpotStatus.approved;
   bool get isPending => status == SpotStatus.pending;
@@ -70,11 +85,15 @@ class Spot {
     DateTime? approvedAt,
     double? avgRating,
     int? ratingsCount,
+    int? likesCount,
+    int? favoritesCount,
     DateTime? createdAt,
     DateTime? updatedAt,
     MarkerKind? markerKind,
     List<SpotPhoto>? photos,
     String? authorDisplayName,
+    bool? isLiked,
+    bool? isFavorited,
     bool clearMarkerKind = false,
   }) {
     return Spot(
@@ -94,11 +113,15 @@ class Spot {
       approvedAt: approvedAt ?? this.approvedAt,
       avgRating: avgRating ?? this.avgRating,
       ratingsCount: ratingsCount ?? this.ratingsCount,
+      likesCount: likesCount ?? this.likesCount,
+      favoritesCount: favoritesCount ?? this.favoritesCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       markerKind: clearMarkerKind ? null : (markerKind ?? this.markerKind),
       photos: photos ?? this.photos,
       authorDisplayName: authorDisplayName ?? this.authorDisplayName,
+      isLiked: isLiked ?? this.isLiked,
+      isFavorited: isFavorited ?? this.isFavorited,
     );
   }
 }
