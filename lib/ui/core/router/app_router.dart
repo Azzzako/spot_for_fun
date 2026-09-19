@@ -14,6 +14,7 @@ import 'package:spot_for_fun/ui/features/settings/views/settings_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
 import 'package:spot_for_fun/ui/features/shop/views/shop_screen.dart';
 import 'package:spot_for_fun/ui/features/splash/views/splash_screen.dart';
+import 'package:spot_for_fun/ui/features/onboarding/views/onboarding_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
 
@@ -63,6 +64,7 @@ class AppRoutes {
   static const mySpots = '/spots/mine';
   static const profile = '/profile';
   static const shop = '/shop';
+  static const onboarding = '/onboarding';
   static const adminPending = '/admin/pending';
   static const settings = '/settings';
   static const settingsEditProfile = '/settings/edit-profile';
@@ -99,6 +101,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.splash,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const OnboardingScreen(),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
