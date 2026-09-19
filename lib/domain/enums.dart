@@ -151,3 +151,44 @@ extension PhotoStatusX on PhotoStatus {
   }
 }
 
+enum NotificationKind {
+  ratingApproved,
+  ratingRejected,
+  photoApproved,
+  photoRejected,
+}
+
+extension NotificationKindX on NotificationKind {
+  String get dbValue => switch (this) {
+        NotificationKind.ratingApproved => 'rating_approved',
+        NotificationKind.ratingRejected => 'rating_rejected',
+        NotificationKind.photoApproved => 'photo_approved',
+        NotificationKind.photoRejected => 'photo_rejected',
+      };
+  String get title => switch (this) {
+        NotificationKind.ratingApproved => 'Reseña aprobada',
+        NotificationKind.ratingRejected => 'Reseña rechazada',
+        NotificationKind.photoApproved => 'Foto aprobada',
+        NotificationKind.photoRejected => 'Foto rechazada',
+      };
+  String get body => switch (this) {
+        NotificationKind.ratingApproved =>
+          'Tu reseña ya es pública. ¡Gracias por contribuir!',
+        NotificationKind.ratingRejected =>
+          'Tu reseña fue rechazada. Revisa las reglas y vuelve a intentarlo.',
+        NotificationKind.photoApproved =>
+          'Tu foto ya es visible en el spot.',
+        NotificationKind.photoRejected =>
+          'Tu foto fue rechazada. Sube una toma diferente.',
+      };
+  static NotificationKind fromDb(Object? raw) {
+    return switch (raw) {
+      'rating_approved' => NotificationKind.ratingApproved,
+      'rating_rejected' => NotificationKind.ratingRejected,
+      'photo_approved' => NotificationKind.photoApproved,
+      'photo_rejected' => NotificationKind.photoRejected,
+      _ => NotificationKind.ratingApproved,
+    };
+  }
+}
+
