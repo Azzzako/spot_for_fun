@@ -6,24 +6,6 @@ import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 
-enum _ServiceKind { restroom, parking, shade, water }
-
-extension on _ServiceKind {
-  IconData get icon => switch (this) {
-        _ServiceKind.restroom => Icons.wc_rounded,
-        _ServiceKind.parking => Icons.local_parking_rounded,
-        _ServiceKind.shade => Icons.beach_access_rounded,
-        _ServiceKind.water => Icons.water_drop_rounded,
-      };
-
-  String get label => switch (this) {
-        _ServiceKind.restroom => 'Baños',
-        _ServiceKind.parking => 'Estacionamiento',
-        _ServiceKind.shade => 'Sombra',
-        _ServiceKind.water => 'Agua',
-      };
-}
-
 class FiltersSheet extends ConsumerStatefulWidget {
   const FiltersSheet({super.key});
 
@@ -32,8 +14,6 @@ class FiltersSheet extends ConsumerStatefulWidget {
 }
 
 class _FiltersSheetState extends ConsumerState<FiltersSheet> {
-  final Set<_ServiceKind> _services = {};
-  double _maxDistance = 10;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -158,65 +138,41 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
                         }).toList(),
                       ),
                       const SizedBox(height: 20),
-                      Text('Servicios',
+                      Text('Mejor horario',
                           style: theme.textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: _ServiceKind.values.map((s) {
-                          final selected = _services.contains(s);
+                        children: BestTimeSlot.values.map((slot) {
+                          final selected = filter.bestTime.contains(slot);
                           return _TypeChip(
-                            label: s.label,
-                            icon: s.icon,
+                            label: slot.label,
+                            icon: _iconForSlot(slot),
                             iconColor: theme.colorScheme.onSurface,
                             selected: selected,
-                            onTap: () => setState(() {
+                            onTap: () {
+                              final next =
+                                  <BestTimeSlot>{...filter.bestTime};
                               if (selected) {
-                                _services.remove(s);
+                                next.remove(slot);
                               } else {
-                                _services.add(s);
+                                next.add(slot);
                               }
-                            }),
+                              notifier.state =
+                                  filter.copyWith(bestTime: next);
+                            },
                           );
                         }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Distancia máxima',
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
-                          Text(
-                            '${_maxDistance.toStringAsFixed(0)} km',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Slider(
-                        value: _maxDistance,
-                        min: 1,
-                        max: 25,
-                        divisions: 24,
-                        onChanged: (v) => setState(() => _maxDistance = v),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () {
-                                notifier.state = const SpotFilter();
-                                setState(() {
-                                  _services.clear();
-                                  _maxDistance = 10;
-                                });
-                              },
+                              onPressed: () =>
+                                  notifier.state = const SpotFilter(),
                               child: const Text('Limpiar'),
                             ),
                           ),
@@ -238,6 +194,16 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
         );
       },
     );
+  }
+
+  IconData _iconForSlot(BestTimeSlot slot) {
+    return switch (slot) {
+      BestTimeSlot.morning => Icons.wb_sunny_outlined,
+      BestTimeSlot.midday => Icons.wb_sunny,
+      BestTimeSlot.afternoon => Icons.wb_cloudy_outlined,
+      BestTimeSlot.evening => Icons.nights_stay_outlined,
+      BestTimeSlot.night => Icons.dark_mode_outlined,
+    };
   }
 }
 
