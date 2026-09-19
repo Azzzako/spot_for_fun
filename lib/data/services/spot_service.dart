@@ -41,7 +41,7 @@ class SpotFilter {
 }
 
 const _authorSelect =
-    'author:profiles!spots_author_id_fkey(username, aka, display_as)';
+    'author:profiles!spots_author_id_fkey(username, aka, display_as, avatar_url)';
 
 class SpotService {
   SpotService(this._client);
@@ -287,6 +287,7 @@ class SpotService {
       markerKind: base.markerKind,
       photos: photos,
       authorDisplayName: _resolveAuthorDisplayName(map['author']),
+      authorAvatarUrl: _resolveAuthorAvatar(map['author']),
     );
   }
 
@@ -300,5 +301,12 @@ class SpotService {
       if (aka != null && aka.isNotEmpty) return aka;
     }
     return username;
+  }
+
+  String? _resolveAuthorAvatar(Object? raw) {
+    if (raw is! Map) return null;
+    final url = raw['avatar_url'] as String?;
+    if (url == null || url.isEmpty) return null;
+    return url;
   }
 }

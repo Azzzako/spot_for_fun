@@ -30,6 +30,7 @@ extension SpotDtoMapper on SpotDto {
       markerKind: markerKind,
       photos: photos.map((p) => p.toDomain()).toList(growable: false),
       authorDisplayName: authorDisplayName,
+      authorAvatarUrl: authorAvatarUrl,
     );
   }
 }

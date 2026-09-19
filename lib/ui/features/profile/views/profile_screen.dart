@@ -12,6 +12,7 @@ import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/profile.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/features/spots/widgets/open_spot_card.dart';
+import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -102,23 +103,11 @@ class _ProfileHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
       child: Column(
         children: [
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHigh,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.colorScheme.outline.withValues(alpha: 0.6),
-                width: 1.5,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.person_outline,
-              size: 44,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-            ),
+          UserAvatar(
+            url: profile.avatarUrl,
+            fallbackSeed: profile.username,
+            size: 92,
+            borderColor: theme.colorScheme.outline.withValues(alpha: 0.6),
           ),
           const SizedBox(height: 12),
           Text(

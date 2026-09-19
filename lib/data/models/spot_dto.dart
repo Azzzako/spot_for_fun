@@ -26,6 +26,7 @@ class SpotDto {
     this.markerKind,
     this.photos = const [],
     this.authorDisplayName,
+    this.authorAvatarUrl,
   });
 
   final String id;
@@ -52,6 +53,7 @@ class SpotDto {
 
   final List<SpotPhotoDto> photos;
   final String? authorDisplayName;
+  final String? authorAvatarUrl;
 
   factory SpotDto.fromMap(Map<String, dynamic> map) {
     return SpotDto(
@@ -85,6 +87,7 @@ class SpotDto {
           : MarkerKindX.fromDb(map['marker_kind']),
       photos: const [],
       authorDisplayName: null,
+      authorAvatarUrl: null,
     );
   }
 }
