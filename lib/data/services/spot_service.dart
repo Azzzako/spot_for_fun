@@ -10,24 +10,31 @@ class SpotFilter {
   const SpotFilter({
     this.types = const {},
     this.difficulties = const {},
+    this.bestTime = const {},
     this.minRating = 0,
   });
 
   final Set<SpotType> types;
   final Set<SpotDifficulty> difficulties;
+  final Set<BestTimeSlot> bestTime;
   final double minRating;
 
   bool get isEmpty =>
-      types.isEmpty && difficulties.isEmpty && minRating == 0;
+      types.isEmpty &&
+      difficulties.isEmpty &&
+      bestTime.isEmpty &&
+      minRating == 0;
 
   SpotFilter copyWith({
     Set<SpotType>? types,
     Set<SpotDifficulty>? difficulties,
+    Set<BestTimeSlot>? bestTime,
     double? minRating,
   }) {
     return SpotFilter(
       types: types ?? this.types,
       difficulties: difficulties ?? this.difficulties,
+      bestTime: bestTime ?? this.bestTime,
       minRating: minRating ?? this.minRating,
     );
   }
@@ -53,6 +60,12 @@ class SpotService {
       query = query.inFilter(
         'difficulty',
         filter.difficulties.map((e) => e.dbValue).toList(),
+      );
+    }
+    if (filter.bestTime.isNotEmpty) {
+      query = query.overlaps(
+        'best_time',
+        filter.bestTime.map((e) => e.dbValue).toList(),
       );
     }
     if (filter.minRating > 0) {
