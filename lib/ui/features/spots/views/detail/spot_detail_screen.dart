@@ -16,6 +16,7 @@ import 'package:spot_for_fun/ui/features/spots/widgets/add_spot_photo_sheet.dart
 import 'package:spot_for_fun/ui/features/spots/widgets/write_rating_sheet.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
@@ -1030,14 +1031,10 @@ class _RatingCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                child: Icon(
-                  Icons.person_outline,
-                  size: 18,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                ),
+              UserAvatar(
+                url: rating.userAvatarUrl,
+                fallbackSeed: rating.authorDisplayName,
+                size: 36,
               ),
               const SizedBox(width: 10),
               Expanded(

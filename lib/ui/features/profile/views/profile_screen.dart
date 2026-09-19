@@ -369,6 +369,12 @@ class _MyReviewCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
+                      UserAvatar(
+                        url: rating.userAvatarUrl,
+                        fallbackSeed: rating.authorDisplayName,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           (rating.spotName ?? 'Spot').toUpperCase(),

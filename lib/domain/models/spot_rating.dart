@@ -10,6 +10,7 @@ class SpotRating {
     required this.createdAt,
     this.userDisplayName,
     this.userAka,
+    this.userAvatarUrl,
     this.userDisplayAs = DisplayAs.username,
     this.status = ReviewStatus.pending,
     this.edited = false,
@@ -25,6 +26,7 @@ class SpotRating {
   final DateTime createdAt;
   final String? userDisplayName;
   final String? userAka;
+  final String? userAvatarUrl;
   final DisplayAs userDisplayAs;
   final ReviewStatus status;
   final bool edited;
@@ -52,6 +54,7 @@ class SpotRating {
     DateTime? createdAt,
     String? userDisplayName,
     String? userAka,
+    String? userAvatarUrl,
     DisplayAs? userDisplayAs,
     ReviewStatus? status,
     bool? edited,
@@ -67,6 +70,7 @@ class SpotRating {
       createdAt: createdAt ?? this.createdAt,
       userDisplayName: userDisplayName ?? this.userDisplayName,
       userAka: userAka ?? this.userAka,
+      userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
       userDisplayAs: userDisplayAs ?? this.userDisplayAs,
       status: status ?? this.status,
       edited: edited ?? this.edited,

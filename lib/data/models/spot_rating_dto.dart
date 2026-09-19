@@ -11,6 +11,7 @@ class SpotRatingDto {
     this.userName,
     this.userDisplayName,
     this.userAka,
+    this.userAvatarUrl,
     this.userDisplayAs = DisplayAs.username,
     this.status = ReviewStatus.pending,
     this.edited = false,
@@ -27,6 +28,7 @@ class SpotRatingDto {
   final String? userName;
   final String? userDisplayName;
   final String? userAka;
+  final String? userAvatarUrl;
   final DisplayAs userDisplayAs;
   final ReviewStatus status;
   final bool edited;
@@ -50,6 +52,7 @@ class SpotRatingDto {
       userName: author?['username'] as String? ?? map['user_name'] as String?,
       userDisplayName: author?['username'] as String?,
       userAka: author?['aka'] as String?,
+      userAvatarUrl: author?['avatar_url'] as String?,
       userDisplayAs: DisplayAsX.fromDb(author?['display_as']),
       status: ReviewStatusX.fromDb(map['status']),
       edited: (map['edited'] as bool?) ?? false,

@@ -6,6 +6,7 @@ import 'package:spot_for_fun/data/repositories/admin_moderation_repository.dart'
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/features/admin/view_models/admin_moderation_view_model.dart';
+import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 class AdminPendingScreen extends ConsumerWidget {
   const AdminPendingScreen({super.key});
@@ -132,6 +133,12 @@ class _RatingCard extends ConsumerWidget {
           children: [
             Row(
               children: [
+                UserAvatar(
+                  url: rating.userAvatarUrl,
+                  fallbackSeed: author,
+                  size: 36,
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     rating.spotName ?? 'Spot',

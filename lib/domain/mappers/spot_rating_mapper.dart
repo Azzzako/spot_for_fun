@@ -12,6 +12,7 @@ extension SpotRatingDtoMapper on SpotRatingDto {
       createdAt: createdAt,
       userDisplayName: userDisplayName,
       userAka: userAka,
+      userAvatarUrl: userAvatarUrl,
       userDisplayAs: userDisplayAs,
       status: status,
       edited: edited,
