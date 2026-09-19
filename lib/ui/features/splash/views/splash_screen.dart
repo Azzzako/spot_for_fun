@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:spot_for_fun/ui/core/providers/onboarding_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _bootstrap() async {
     await Future<void>.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
+    final onboarding = await ref.read(onboardingCompletedProvider.future);
+    if (!mounted) return;
+    if (!onboarding) {
+      context.go(AppRoutes.onboarding);
+      return;
+    }
     final authAsync = ref.read(authStateProvider);
     final session = authAsync.valueOrNull?.session;
     if (!mounted) return;
