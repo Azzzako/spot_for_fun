@@ -25,6 +25,7 @@ class Spot {
     this.markerKind,
     this.photos = const [],
     this.authorDisplayName,
+    this.authorAvatarUrl,
     this.isLiked = false,
     this.isFavorited = false,
   });
@@ -52,6 +53,7 @@ class Spot {
   final MarkerKind? markerKind;
   final List<SpotPhoto> photos;
   final String? authorDisplayName;
+  final String? authorAvatarUrl;
 
   /// True when the current user has liked this spot. Set by the
   /// repository when the spot list is hydrated; falls back to false
@@ -92,6 +94,7 @@ class Spot {
     MarkerKind? markerKind,
     List<SpotPhoto>? photos,
     String? authorDisplayName,
+    String? authorAvatarUrl,
     bool? isLiked,
     bool? isFavorited,
     bool clearMarkerKind = false,
@@ -120,6 +123,7 @@ class Spot {
       markerKind: clearMarkerKind ? null : (markerKind ?? this.markerKind),
       photos: photos ?? this.photos,
       authorDisplayName: authorDisplayName ?? this.authorDisplayName,
+      authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,
       isLiked: isLiked ?? this.isLiked,
       isFavorited: isFavorited ?? this.isFavorited,
     );

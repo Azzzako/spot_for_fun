@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
+import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 class SpotListCard extends StatelessWidget {
   const SpotListCard({
@@ -104,15 +105,27 @@ class SpotListCard extends StatelessWidget {
                           ),
                         ),
                         if (spot.authorDisplayName != null)
-                          Text(
-                            'Por @${spot.authorDisplayName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.55),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            children: [
+                              UserAvatar(
+                                url: spot.authorAvatarUrl,
+                                fallbackSeed: spot.authorDisplayName!,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Por @${spot.authorDisplayName}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.55),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         const SizedBox(height: 8),
                         Row(

@@ -7,7 +7,7 @@ import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 
 const _authorSelect =
-    'author:profiles!spot_ratings_user_id_fkey(username, aka, display_as)';
+    'author:profiles!spot_ratings_user_id_fkey(username, aka, display_as, avatar_url)';
 const _spotSelect = 'spot:spots!spot_ratings_spot_id_fkey(name)';
 const _photoSpotSelect = 'spot:spots!spot_photos_spot_id_fkey(name)';
 

@@ -5,7 +5,7 @@ import 'package:spot_for_fun/data/models/spot_rating_dto.dart';
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 
 const _authorSelect =
-    'author:profiles!spot_ratings_user_id_fkey(username, aka, display_as)';
+    'author:profiles!spot_ratings_user_id_fkey(username, aka, display_as, avatar_url)';
 const _spotSelect = 'spot:spots!spot_ratings_spot_id_fkey(name)';
 
 class SpotRatingService {
