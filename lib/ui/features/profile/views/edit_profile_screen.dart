@@ -1,10 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/domain/models/profile.dart';
 import 'package:spot_for_fun/ui/features/profile/view_models/edit_profile_view_model.dart';
+import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -20,6 +25,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _emailCtrl = TextEditingController();
   final _instagramCtrl = TextEditingController();
 
+  Profile? _profile;
   bool _hydrated = false;
 
   @override
@@ -38,7 +44,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _emailCtrl.text = email;
         _instagramCtrl.text = profile.instagram ?? '';
       }
-      if (mounted) setState(() => _hydrated = true);
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _hydrated = true;
+        });
+      }
     });
   }
 
@@ -94,6 +105,59 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _pickAvatar() async {
+    final source = await _askAvatarSource();
+    if (source == null || !mounted) return;
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (file == null || !mounted) return;
+    final bytes = await file.readAsBytes();
+    final ext = _extFrom(file.name);
+    ref
+        .read(editProfileViewModelProvider.notifier)
+        .setPendingAvatar(bytes, ext);
+  }
+
+  Future<ImageSource?> _askAvatarSource() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.of(sheetCtx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Elegir de galería'),
+              onTap: () => Navigator.of(sheetCtx).pop(ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Cancelar'),
+              onTap: () => Navigator.of(sheetCtx).pop(null),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _extFrom(String filename) {
+    final dot = filename.lastIndexOf('.');
+    if (dot < 0 || dot == filename.length - 1) return 'jpg';
+    final raw = filename.substring(dot + 1).toLowerCase();
+    return raw == 'png' || raw == 'webp' || raw == 'gif' ? raw : 'jpg';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -126,6 +190,53 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Column(
+                  children: [
+                    _AvatarPreview(
+                      profile: _profile,
+                      pendingBytes: state.pendingAvatarBytes,
+                      markForRemoval: state.removeAvatar,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton.icon(
+                          onPressed: _pickAvatar,
+                          icon: const Icon(Icons.photo_camera_outlined),
+                          label: Text(
+                            state.pendingAvatarBytes != null ||
+                                    state.removeAvatar
+                                ? 'Cambiar foto'
+                                : 'Elegir foto',
+                          ),
+                        ),
+                        if ((_profile?.avatarUrl != null &&
+                                _profile!.avatarUrl!.isNotEmpty) ||
+                            state.pendingAvatarBytes != null ||
+                            state.removeAvatar) ...[
+                          const SizedBox(width: 4),
+                          TextButton.icon(
+                            onPressed: () => ref
+                                .read(editProfileViewModelProvider.notifier)
+                                .markAvatarForRemoval(),
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: theme.colorScheme.error,
+                            ),
+                            label: Text(
+                              'Quitar',
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
               _Label('Nombre'),
               const SizedBox(height: 8),
               TextFormField(
@@ -322,6 +433,62 @@ class _Banner extends StatelessWidget {
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+}
+
+class _AvatarPreview extends StatelessWidget {
+  const _AvatarPreview({
+    required this.profile,
+    required this.pendingBytes,
+    required this.markForRemoval,
+  });
+
+  final Profile? profile;
+  final Uint8List? pendingBytes;
+  final bool markForRemoval;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final size = 110.0;
+    final username = profile?.username ?? '?';
+
+    Widget content;
+    if (markForRemoval) {
+      content = Container(
+        color: theme.colorScheme.surfaceContainerHigh,
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.person_off_outlined,
+          size: 56,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+        ),
+      );
+    } else if (pendingBytes != null) {
+      content = Image.memory(pendingBytes!, fit: BoxFit.cover);
+    } else {
+      content = UserAvatar(
+        url: profile?.avatarUrl,
+        fallbackSeed: username,
+        size: size,
+        borderColor: theme.colorScheme.outline.withValues(alpha: 0.6),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      child: content,
     );
   }
 }

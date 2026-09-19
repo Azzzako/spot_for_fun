@@ -24,6 +24,9 @@ class EditProfileState {
     this.status = EditProfileStatus.idle,
     this.errorMessage,
     this.emailConfirmSent = false,
+    this.pendingAvatarBytes,
+    this.pendingAvatarExt,
+    this.removeAvatar = false,
   });
 
   final String username;
@@ -43,11 +46,22 @@ class EditProfileState {
   final String? errorMessage;
   final bool emailConfirmSent;
 
+  /// Bytes of a freshly picked avatar awaiting upload. When non-null,
+  /// the submit() flow uploads them and updates profiles.avatar_url.
+  final Uint8List? pendingAvatarBytes;
+  final String? pendingAvatarExt;
+
+  /// True when the user tapped the trash icon and wants the existing
+  /// avatar removed. Cleared after a successful save.
+  final bool removeAvatar;
+
   bool get hasProfileChanges =>
       username.trim() != originalUsername.trim() ||
       aka.trim() != originalAka.trim() ||
       instagram.trim() != originalInstagram.trim() ||
-      displayAs != originalDisplayAs;
+      displayAs != originalDisplayAs ||
+      pendingAvatarBytes != null ||
+      removeAvatar;
 
   bool get hasEmailChange =>
       email.trim().toLowerCase() != originalEmail.trim().toLowerCase();
@@ -71,6 +85,11 @@ class EditProfileState {
     EditProfileStatus? status,
     String? errorMessage,
     bool? emailConfirmSent,
+    Uint8List? pendingAvatarBytes,
+    String? pendingAvatarExt,
+    bool? removeAvatar,
+    bool clearPendingAvatar = false,
+    bool clearRemoveAvatar = false,
     bool clearError = false,
   }) {
     return EditProfileState(
@@ -88,6 +107,12 @@ class EditProfileState {
       status: status ?? this.status,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       emailConfirmSent: emailConfirmSent ?? this.emailConfirmSent,
+      pendingAvatarBytes: clearPendingAvatar
+          ? null
+          : (pendingAvatarBytes ?? this.pendingAvatarBytes),
+      pendingAvatarExt:
+          clearPendingAvatar ? null : (pendingAvatarExt ?? this.pendingAvatarExt),
+      removeAvatar: clearRemoveAvatar ? false : (removeAvatar ?? this.removeAvatar),
     );
   }
 }
@@ -126,6 +151,31 @@ class EditProfileViewModel extends AutoDisposeNotifier<EditProfileState> {
       state = state.copyWith(instagram: v, clearError: true);
   void setDisplayAs(DisplayAs v) =>
       state = state.copyWith(displayAs: v, clearError: true);
+
+  void setPendingAvatar(Uint8List bytes, String ext) {
+    state = state.copyWith(
+      pendingAvatarBytes: bytes,
+      pendingAvatarExt: ext,
+      removeAvatar: false,
+      clearError: true,
+    );
+  }
+
+  void markAvatarForRemoval() {
+    state = state.copyWith(
+      removeAvatar: true,
+      clearPendingAvatar: true,
+      clearError: true,
+    );
+  }
+
+  void clearPendingAvatar() {
+    state = state.copyWith(
+      clearPendingAvatar: true,
+      clearRemoveAvatar: true,
+      clearError: true,
+    );
+  }
 
   String? _validate() {
     final s = state;
@@ -180,6 +230,17 @@ class EditProfileViewModel extends AutoDisposeNotifier<EditProfileState> {
     if (state.hasProfileChanges) {
       try {
         final service = ref.read(profileServiceProvider);
+        // Avatar changes go first so a failed upload doesn't rename
+        // the user. Each step is independent on the DB side.
+        if (state.pendingAvatarBytes != null) {
+          await service.uploadAvatar(
+            uid: uid,
+            bytes: state.pendingAvatarBytes!,
+            ext: state.pendingAvatarExt ?? 'jpg',
+          );
+        } else if (state.removeAvatar) {
+          await service.clearAvatar(uid);
+        }
         await service.update(
           uid: uid,
           username: state.username.trim(),
@@ -193,6 +254,8 @@ class EditProfileViewModel extends AutoDisposeNotifier<EditProfileState> {
           originalAka: state.aka.trim(),
           originalInstagram: state.instagram.trim(),
           originalDisplayAs: state.displayAs,
+          clearPendingAvatar: true,
+          clearRemoveAvatar: true,
         );
       } catch (e) {
         final msg = e.toString();
