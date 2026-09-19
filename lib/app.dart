@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/core/widgets/notifications_listener.dart';
 
 class SpotForFunApp extends ConsumerWidget {
   const SpotForFunApp({super.key});
@@ -16,10 +17,18 @@ class SpotForFunApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Spot For Fun',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _messengerKey,
       themeMode: theme.toMaterialMode(),
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       routerConfig: router,
+      builder: (context, child) {
+        return NotificationsListener(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
+
+final _messengerKey = GlobalKey<ScaffoldMessengerState>();
