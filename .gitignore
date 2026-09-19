@@ -53,3 +53,6 @@ app.*.map.json
 .agents/
 skills-lock.json
 
+# Supabase CLI local cache
+supabase/.temp/
+
