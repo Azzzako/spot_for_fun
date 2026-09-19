@@ -49,20 +49,23 @@ class ProfileService {
     return res != null;
   }
 
-  /// Uploads bytes to the `avatars` bucket under `<uid>.<ext>` and
-  /// writes the public URL into profiles.avatar_url. Returns the
-  /// updated profile. Throws if the bucket is missing or the user is
-  /// not signed in.
+  /// Uploads bytes to the `avatars` bucket under
+  /// `<uid>/avatar_<timestamp>.<ext>` and writes the public URL into
+  /// profiles.avatar_url. The timestamp in the filename busts the
+  /// CDN cache so re-uploads show up immediately. Returns the updated
+  /// profile. Throws if the bucket is missing or the user is not
+  /// signed in.
   Future<ProfileDto> uploadAvatar({
     required String uid,
     required Uint8List bytes,
     required String ext,
   }) async {
-    final path = '$uid.$ext';
+    final ts = DateTime.now().microsecondsSinceEpoch;
+    final path = '$uid/avatar_$ts.$ext';
     await _client.storage.from('avatars').uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(contentType: 'image/$ext', upsert: true),
+          fileOptions: FileOptions(contentType: 'image/$ext'),
         );
     final url = _client.storage.from('avatars').getPublicUrl(path);
     final res = await _client
@@ -74,16 +77,21 @@ class ProfileService {
     return ProfileDto.fromMap(res);
   }
 
-  /// Removes the avatar from storage (best-effort) and clears
-  /// profiles.avatar_url.
+  /// Removes the most recent avatar object(s) under the user's
+  /// folder (best-effort) and clears profiles.avatar_url. Older
+  /// timestamped files leak but are harmless; clean them up with a
+  /// scheduled Storage job if needed.
   Future<ProfileDto> clearAvatar(String uid) async {
     final existing = await fetchById(uid);
     final url = existing?.avatarUrl;
     if (url != null && url.isNotEmpty) {
-      try {
-        await _client.storage.from('avatars').remove([url]);
-      } catch (_) {
-        // Object may already be gone; ignore and continue.
+      final path = _pathFromPublicUrl(url);
+      if (path != null) {
+        try {
+          await _client.storage.from('avatars').remove([path]);
+        } catch (_) {
+          // Object may already be gone; ignore and continue.
+        }
       }
     }
     final res = await _client
@@ -93,5 +101,15 @@ class ProfileService {
         .select()
         .single();
     return ProfileDto.fromMap(res);
+  }
+
+  /// Extracts the bucket-relative path from a public storage URL,
+  /// e.g. `https://x.supabase.co/storage/v1/object/public/avatars/
+  /// `{uid}`/avatar_1.jpg` -> `{uid}/avatar_1.jpg`.
+  String? _pathFromPublicUrl(String url) {
+    final marker = '/object/public/avatars/';
+    final i = url.indexOf(marker);
+    if (i < 0) return null;
+    return url.substring(i + marker.length);
   }
 }
