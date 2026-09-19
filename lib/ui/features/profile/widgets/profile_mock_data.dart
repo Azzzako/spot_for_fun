@@ -11,13 +11,17 @@ class SpotListCard extends StatelessWidget {
     super.key,
     required this.spot,
     this.onTap,
+    this.onLikeToggle,
     this.onBookmarkToggle,
+    this.liked = false,
     this.bookmarked = false,
   });
 
   final Spot spot;
   final VoidCallback? onTap;
+  final ValueChanged<bool>? onLikeToggle;
   final ValueChanged<bool>? onBookmarkToggle;
+  final bool liked;
   final bool bookmarked;
 
   @override
@@ -142,22 +146,56 @@ class SpotListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (onBookmarkToggle != null)
-                    IconButton(
-                      tooltip: bookmarked
-                          ? 'Quitar favorito'
-                          : 'Agregar favorito',
-                      icon: Icon(
-                        bookmarked
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        color: bookmarked
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                      ),
-                      onPressed: () =>
-                          onBookmarkToggle?.call(!bookmarked),
+                  if (onLikeToggle != null || onBookmarkToggle != null)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (onLikeToggle != null)
+                          IconButton(
+                            tooltip: liked ? 'Quitar like' : 'Me gusta',
+                            icon: Icon(
+                              liked
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: liked
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                            ),
+                            onPressed: () => onLikeToggle?.call(!liked),
+                          ),
+                        if (spot.likesCount > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              _formatCount(spot.likesCount),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (onBookmarkToggle != null) ...[
+                          const SizedBox(height: 4),
+                          IconButton(
+                            tooltip: bookmarked
+                                ? 'Quitar favorito'
+                                : 'Agregar favorito',
+                            icon: Icon(
+                              bookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: bookmarked
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                            ),
+                            onPressed: () =>
+                                onBookmarkToggle?.call(!bookmarked),
+                          ),
+                        ],
+                      ],
                     ),
                 ],
               ),
@@ -168,6 +206,12 @@ class SpotListCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatCount(int n) {
+  if (n < 1000) return '$n';
+  if (n < 10000) return '${(n / 1000).toStringAsFixed(1)}k';
+  return '${(n / 1000).toStringAsFixed(0)}k';
 }
 
 class _StatusBanner extends StatelessWidget {
