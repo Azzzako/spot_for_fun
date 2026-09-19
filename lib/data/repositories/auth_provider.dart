@@ -46,6 +46,15 @@ final currentUserRoleProvider = Provider<UserRole>((ref) {
   );
 });
 
+/// True when the signed-in user is the admin. Mirrors the
+/// `public.is_admin()` SQL function, which currently checks for
+/// `admin@admin.com` (see migration 0010). Server-side RLS is the
+/// real gate; this is only a UX redirect.
+final isAdminProvider = Provider<bool>((ref) {
+  final email = ref.watch(currentUserEmailProvider)?.toLowerCase().trim();
+  return email == 'admin@admin.com';
+});
+
 final profileServiceProvider = Provider<ProfileService>((ref) {
   return ProfileService(ref.watch(supabaseClientProvider));
 });
