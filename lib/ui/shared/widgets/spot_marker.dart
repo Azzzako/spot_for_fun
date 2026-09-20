@@ -203,32 +203,31 @@ class _CircularPin extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.all(4),
-      child: Container(
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
+      child: ClipOval(
+        child: Container(
           color: Colors.white,
+          alignment: Alignment.center,
+          child: hasPhoto
+              ? SizedBox.expand(
+                  child: CachedNetworkImage(
+                    imageUrl: photoUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, _) => ColoredBox(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                    ),
+                    errorWidget: (_, _, _) => Container(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Icon(icon, color: color, size: size * 0.5),
+                    ),
+                  ),
+                )
+              : Icon(
+                  icon,
+                  color: Colors.white,
+                  size: size * 0.5,
+                ),
         ),
-        padding: const EdgeInsets.all(2),
-        clipBehavior: Clip.antiAlias,
-        alignment: Alignment.center,
-        child: hasPhoto
-            ? CachedNetworkImage(
-                imageUrl: photoUrl!,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                ),
-                errorWidget: (_, _, _) => Container(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  alignment: Alignment.center,
-                  child: Icon(icon, color: color, size: size * 0.5),
-                ),
-              )
-            : Icon(
-                icon,
-                color: Colors.white,
-                size: size * 0.5,
-              ),
       ),
     );
   }
