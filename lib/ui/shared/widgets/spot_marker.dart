@@ -182,18 +182,12 @@ class _CircularPin extends StatelessWidget {
     final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
     final theme = Theme.of(context);
 
-    // Layered stack so the photo fully covers the inner circle:
-    //   outer  = kind-colored ring (4 px)
-    //   middle = white border (2 px)
-    //   inner  = photo (or icon fallback) clipped to a circle
-    // The colored layer is never used as a background, so it can't
-    // bleed through gaps while the photo loads.
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color,
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.28),
@@ -202,32 +196,32 @@ class _CircularPin extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(2),
       child: ClipOval(
-        child: Container(
-          color: Colors.white,
-          alignment: Alignment.center,
-          child: hasPhoto
-              ? SizedBox.expand(
-                  child: CachedNetworkImage(
-                    imageUrl: photoUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => ColoredBox(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                    ),
-                    errorWidget: (_, _, _) => Container(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      alignment: Alignment.center,
-                      child: Icon(icon, color: color, size: size * 0.5),
-                    ),
+        child: hasPhoto
+            ? SizedBox.expand(
+                child: CachedNetworkImage(
+                  imageUrl: photoUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
                   ),
-                )
-              : Icon(
+                  errorWidget: (_, _, _) => Container(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    alignment: Alignment.center,
+                    child: Icon(icon, color: color, size: size * 0.5),
+                  ),
+                ),
+              )
+            : Container(
+                color: color,
+                alignment: Alignment.center,
+                child: Icon(
                   icon,
                   color: Colors.white,
                   size: size * 0.5,
                 ),
-        ),
+              ),
       ),
     );
   }
