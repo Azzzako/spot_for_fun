@@ -86,6 +86,8 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     final vm = ref.read(createSpotViewModelProvider.notifier);
     final theme = Theme.of(context);
     final busy = state.submitState == SubmitState.uploading;
+    final canSubmit =
+        !busy && state.photos.isNotEmpty;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -268,7 +270,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                     SizedBox(
                       height: 56,
                       child: FilledButton(
-                        onPressed: busy ? null : _submit,
+                        onPressed: canSubmit ? _submit : null,
                         child: busy
                             ? const SizedBox(
                                 height: 22,
@@ -340,12 +342,20 @@ class _PhotosCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              const Spacer(),
+              Text(
+                'Mínimo 1 · máximo 3',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           PhotoPickerGrid(
             photos: photos,
             onPhotosChanged: onPhotosChanged,
+            maxPhotos: 3,
           ),
         ],
       ),

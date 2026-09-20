@@ -158,10 +158,10 @@ class CreateSpotViewModel extends AutoDisposeNotifier<CreateSpotState> {
       );
       return;
     }
-    if (state.photos.length < 2) {
+    if (state.photos.isEmpty) {
       state = state.copyWith(
         submitState: SubmitState.error,
-        errorMessage: 'Agrega al menos 2 fotos',
+        errorMessage: 'Agrega al menos 1 foto',
       );
       return;
     }
