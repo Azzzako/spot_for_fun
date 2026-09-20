@@ -180,13 +180,20 @@ class _CircularPin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
+    final theme = Theme.of(context);
+
+    // Layered stack so the photo fully covers the inner circle:
+    //   outer  = kind-colored ring (4 px)
+    //   middle = white border (2 px)
+    //   inner  = photo (or icon fallback) clipped to a circle
+    // The colored layer is never used as a background, so it can't
+    // bleed through gaps while the photo loads.
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color,
-        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.28),
@@ -195,28 +202,34 @@ class _CircularPin extends StatelessWidget {
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      child: hasPhoto
-          ? CachedNetworkImage(
-              imageUrl: photoUrl!,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => Icon(
+      padding: const EdgeInsets.all(4),
+      child: Container(
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+        ),
+        padding: const EdgeInsets.all(2),
+        clipBehavior: Clip.antiAlias,
+        alignment: Alignment.center,
+        child: hasPhoto
+            ? CachedNetworkImage(
+                imageUrl: photoUrl!,
+                fit: BoxFit.cover,
+                placeholder: (_, _) => ColoredBox(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                ),
+                errorWidget: (_, _, _) => Container(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: color, size: size * 0.5),
+                ),
+              )
+            : Icon(
                 icon,
                 color: Colors.white,
                 size: size * 0.5,
               ),
-              errorWidget: (_, _, _) => Icon(
-                icon,
-                color: Colors.white,
-                size: size * 0.5,
-              ),
-            )
-          : Icon(
-              icon,
-              color: Colors.white,
-              size: size * 0.5,
-            ),
+      ),
     );
   }
 }
