@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -15,8 +16,6 @@ enum SpotKind {
   skatepark,
   gap,
 }
-
-enum SpotMarkerShape { circle, roundedSquare, stadium }
 
 SpotKind classifySpotKind(String type) {
   return switch (type) {
@@ -43,20 +42,6 @@ SpotKind resolveSpotKind(Spot spot) {
     };
   }
   return classifySpotKind(spot.type.dbValue);
-}
-
-SpotMarkerShape shapeForSpotKind(SpotKind kind) {
-  return switch (kind) {
-    SpotKind.street => SpotMarkerShape.circle,
-    SpotKind.park => SpotMarkerShape.roundedSquare,
-    SpotKind.bowl => SpotMarkerShape.circle,
-    SpotKind.plaza => SpotMarkerShape.roundedSquare,
-    SpotKind.diy => SpotMarkerShape.circle,
-    SpotKind.ledge => SpotMarkerShape.stadium,
-    SpotKind.skateshop => SpotMarkerShape.roundedSquare,
-    SpotKind.skatepark => SpotMarkerShape.roundedSquare,
-    SpotKind.gap => SpotMarkerShape.stadium,
-  };
 }
 
 IconData spotIconFor(SpotKind kind) {
@@ -88,29 +73,24 @@ Color spotColorFor(SpotKind kind, Brightness brightness) {
   };
 }
 
-BorderRadius _radiusFor(SpotMarkerShape shape) {
-  return switch (shape) {
-    SpotMarkerShape.circle => BorderRadius.circular(16),
-    SpotMarkerShape.roundedSquare => BorderRadius.circular(6),
-    SpotMarkerShape.stadium => BorderRadius.circular(16),
-  };
-}
-
 const double kSpotMarkerWidth = 110.0;
-const double kSpotMarkerHeight = 56.0;
-const double kSpotMarkerPinSize = 32.0;
+const double kSpotMarkerHeight = 64.0;
+const double kSpotMarkerPinSize = 40.0;
+const double kSpotMarkerLabelMaxWidth = 100.0;
 
-/// Marker with icon pin + name label. Renders label only when [showLabel]
-/// is true (caller wires zoom threshold).
+/// Marker with circular pin (first spot photo as thumbnail when
+/// available, kind-colored icon fallback otherwise) plus an optional
+/// label below. Renders label only when [showLabel] is true (caller
+/// wires the zoom threshold).
 Widget spotMarkerWidget({
   required SpotKind kind,
   required Brightness brightness,
+  String? photoUrl,
   String? label,
   bool showLabel = false,
 }) {
   final color = spotColorFor(kind, brightness);
   final icon = spotIconFor(kind);
-  final shape = shapeForSpotKind(kind);
 
   return SizedBox(
     width: kSpotMarkerWidth,
@@ -123,7 +103,7 @@ Widget spotMarkerWidget({
           Positioned(
             top: kSpotMarkerPinSize + 4,
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 100),
+              constraints: const BoxConstraints(maxWidth: kSpotMarkerLabelMaxWidth),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -155,26 +135,11 @@ Widget spotMarkerWidget({
           ),
         Positioned(
           top: 0,
-          child: Container(
-            width: kSpotMarkerPinSize,
-            height: kSpotMarkerPinSize,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: _radiusFor(shape),
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: kind == SpotKind.ledge ? 18 : 16,
-            ),
+          child: _CircularPin(
+            color: color,
+            icon: icon,
+            photoUrl: photoUrl,
+            size: kSpotMarkerPinSize,
           ),
         ),
       ],
@@ -182,25 +147,76 @@ Widget spotMarkerWidget({
   );
 }
 
-/// Compact pin (no label, no padding) for use in lists / pickers.
+/// Compact pin (no label) for use in lists / pickers. Circular, photo
+/// when available, colored icon fallback otherwise.
 Widget spotMarkerPin({
   required SpotKind kind,
   required Brightness brightness,
+  String? photoUrl,
   double size = 32,
 }) {
   final color = spotColorFor(kind, brightness);
-  return Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: _radiusFor(shapeForSpotKind(kind)),
-      border: Border.all(color: Colors.white, width: 2),
-    ),
-    child: Icon(
-      spotIconFor(kind),
-      color: Colors.white,
-      size: size * 0.5,
-    ),
+  return _CircularPin(
+    color: color,
+    icon: spotIconFor(kind),
+    photoUrl: photoUrl,
+    size: size,
   );
+}
+
+class _CircularPin extends StatelessWidget {
+  const _CircularPin({
+    required this.color,
+    required this.icon,
+    required this.photoUrl,
+    required this.size,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String? photoUrl;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      child: hasPhoto
+          ? CachedNetworkImage(
+              imageUrl: photoUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => Icon(
+                icon,
+                color: Colors.white,
+                size: size * 0.5,
+              ),
+              errorWidget: (_, _, _) => Icon(
+                icon,
+                color: Colors.white,
+                size: size * 0.5,
+              ),
+            )
+          : Icon(
+              icon,
+              color: Colors.white,
+              size: size * 0.5,
+            ),
+    );
+  }
 }

@@ -157,6 +157,9 @@ class _DetailBody extends ConsumerWidget {
                     spotMarkerPin(
                       kind: resolveSpotKind(spot),
                       brightness: theme.brightness,
+                      photoUrl: spot.photos.isNotEmpty
+                          ? spot.photos.first.url
+                          : null,
                       size: 40,
                     ),
                     const SizedBox(width: 12),

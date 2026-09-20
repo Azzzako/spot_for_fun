@@ -203,6 +203,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ...spotsAsync.when(
                     data: (spots) => spots.map((s) {
                       final kind = resolveSpotKind(s);
+                      final photoUrl =
+                          s.photos.isNotEmpty ? s.photos.first.url : null;
                       return Marker(
                         point: LatLng(s.lat, s.lng),
                         width: kSpotMarkerWidth,
@@ -214,6 +216,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           child: spotMarkerWidget(
                             kind: kind,
                             brightness: brightness,
+                            photoUrl: photoUrl,
                             label: s.name,
                             showLabel: showLabels,
                           ),
