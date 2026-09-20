@@ -1,6 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
@@ -121,14 +120,12 @@ Widget spotMarkerWidget({
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  textStyle: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF121212),
-                    height: 1.1,
-                    letterSpacing: 0.1,
-                  ),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF121212),
+                  height: 1.1,
+                  letterSpacing: 0.1,
                 ),
               ),
             ),
@@ -182,21 +179,9 @@ class _CircularPin extends StatelessWidget {
     final hasPhoto = photoUrl != null && photoUrl!.isNotEmpty;
     final theme = Theme.of(context);
 
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(2),
       child: ClipOval(
         child: hasPhoto
             ? SizedBox.expand(
