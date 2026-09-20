@@ -1,11 +1,23 @@
 # STATUS — Contexto para retomar
 
-Última sesión: spot_for_fun (develop @ 8213c65). Todo commiteado y pusheado a `origin/develop`.
+Última sesión: spot_for_fun (develop @ 229b27f). Todo commiteado y pusheado a `origin/develop`.
 
 ## Estado de git
-- `develop` sincronizado con `origin/develop` (`7726bc8..8213c65`, 24 commits).
+- `develop` sincronizado con `origin/develop` (`7726bc8..229b27f`, 25 commits).
 - Working tree limpio salvo `assets/identity/estilo.png` (palette reference, intencionalmente sin trackear).
-- Branch nueva `feat/profile-avatar` mergeada. Todas las features viven en `develop`.
+- Todas las features viven en `develop`. No hay branches locales activas.
+
+## Migrations Supabase — TODAS APLICADAS (verificadas vía REST)
+- ✅ 0007 (aka, instagram)
+- ✅ 0008 (display_as)
+- ✅ 0009 (rating moderation)
+- ✅ 0010 (admin auto-confirm)
+- ✅ 0011 (fix rating audit trigger)
+- ✅ 0012 (photo moderation)
+- ✅ **0013 admin moderation policies** — admin SELECT pending + UPDATE status en spot_ratings; admin UPDATE spot_photos.
+- ✅ **0014 social likes + favorites** — tablas spot_likes / spot_favorites, counters denormalizados con triggers, RLS user-scoped.
+- ✅ **0015 in-app notifications** — tabla `notifications` en supabase_realtime, triggers AFTER UPDATE en spot_ratings + spot_photos insertan filas en approved/rejected.
+- ✅ **0016 profile avatar** — bucket `avatars` (público, RLS folder-scoped), ProfileService.uploadAvatar funcional.
 
 ## Features completadas en esta sesión
 
@@ -49,7 +61,7 @@
 
 ## Decisiones / preguntas abiertas
 
-### 1. GIFs en spots (PENDIENTE — usuario lo está pensando)
+### 1. GIFs en spots (PENDIENTE — usuario lo piensa)
 3 interpretaciones posibles:
 - **A) GIFs animados como la foto misma** (Recommended): image_picker ya los soporta, falta widget `AnimatedNetworkImage` (Image.network directo + cache custom) y migración para `mime_type` / `is_animated`. Marcador del mapa quedaría estático (primer frame).
 - **B) Overlay de GIFs / stickers**: integración Tenor/Giphy API, schema nuevo.
@@ -65,6 +77,17 @@ Decidido: ya resuelto en `de41a5a` — `fetchVisiblePhotos` se llama en paralelo
 
 ### 4. SpotDetail → push directo
 Decidido: implementado en sesión previa (sin peek card intermedio).
+
+### 5. Verificación post-deploy de features nuevas
+Migrations aplicadas y features funcionales. Pendiente smoke test en device real:
+- Crear spot con foto obligatoria (mín 1 / máx 3)
+- Like + favorite desde SpotListCard + Profile > Favoritos
+- Reviewer avatar en cards de reseña
+- Editar perfil: subir avatar + ver en header
+- Marker circular con foto de spot en mapa
+- Tap marker → Hero animation al fullscreen viewer
+- Aprobar reseña como admin@admin.com desde /admin/pending → notificación SnackBar en otra sesión
+- Onboarding primer launch después de reinstall / clear prefs
 
 ## SQL migrations aplicadas / pendientes
 
