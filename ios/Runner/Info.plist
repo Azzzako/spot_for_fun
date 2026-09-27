@@ -74,6 +74,12 @@
 	<string>Adjuntar fotos existentes del spot que quieres compartir.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Guardar fotos tomadas del spot en tu biblioteca.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>geo</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

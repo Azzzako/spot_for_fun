@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/data/repositories/social_repository.dart';
@@ -575,7 +576,7 @@ class _ActionRow extends ConsumerWidget {
           child: _ActionButton(
             icon: Icons.directions_rounded,
             label: 'Cómo llegar',
-            onTap: () => _stub(context, 'Cómo llegar'),
+            onTap: () => _openDirections(context, spot),
           ),
         ),
         const SizedBox(width: 10),
@@ -595,6 +596,32 @@ class _ActionRow extends ConsumerWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(content: Text('$label · próximamente')),
+      );
+  }
+
+  Future<void> _openDirections(BuildContext context, Spot spot) async {
+    final lat = spot.lat.toStringAsFixed(6);
+    final lng = spot.lng.toStringAsFixed(6);
+    final encodedName = Uri.encodeComponent(spot.name);
+    final geo = Uri.parse(
+      'geo:$lat,$lng?q=$lat,$lng($encodedName)',
+    );
+    final web = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    if (await canLaunchUrl(geo)) {
+      await launchUrl(geo, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (await canLaunchUrl(web)) {
+      await launchUrl(web, mode: LaunchMode.externalApplication);
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el mapa.')),
       );
   }
 }
