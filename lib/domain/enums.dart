@@ -156,6 +156,8 @@ enum NotificationKind {
   ratingRejected,
   photoApproved,
   photoRejected,
+  spotApproved,
+  spotRejected,
 }
 
 extension NotificationKindX on NotificationKind {
@@ -164,12 +166,16 @@ extension NotificationKindX on NotificationKind {
         NotificationKind.ratingRejected => 'rating_rejected',
         NotificationKind.photoApproved => 'photo_approved',
         NotificationKind.photoRejected => 'photo_rejected',
+        NotificationKind.spotApproved => 'spot_approved',
+        NotificationKind.spotRejected => 'spot_rejected',
       };
   String get title => switch (this) {
         NotificationKind.ratingApproved => 'Reseña aprobada',
         NotificationKind.ratingRejected => 'Reseña rechazada',
         NotificationKind.photoApproved => 'Foto aprobada',
         NotificationKind.photoRejected => 'Foto rechazada',
+        NotificationKind.spotApproved => 'Spot aprobado',
+        NotificationKind.spotRejected => 'Spot rechazado',
       };
   String get body => switch (this) {
         NotificationKind.ratingApproved =>
@@ -180,6 +186,10 @@ extension NotificationKindX on NotificationKind {
           'Tu foto ya es visible en el spot.',
         NotificationKind.photoRejected =>
           'Tu foto fue rechazada. Sube una toma diferente.',
+        NotificationKind.spotApproved =>
+          'Tu spot ya aparece en el mapa. ¡Gracias por compartirlo!',
+        NotificationKind.spotRejected =>
+          'Tu spot fue rechazado. Revisa el motivo en Mis spots.',
       };
   static NotificationKind fromDb(Object? raw) {
     return switch (raw) {
@@ -187,6 +197,8 @@ extension NotificationKindX on NotificationKind {
       'rating_rejected' => NotificationKind.ratingRejected,
       'photo_approved' => NotificationKind.photoApproved,
       'photo_rejected' => NotificationKind.photoRejected,
+      'spot_approved' => NotificationKind.spotApproved,
+      'spot_rejected' => NotificationKind.spotRejected,
       _ => NotificationKind.ratingApproved,
     };
   }
