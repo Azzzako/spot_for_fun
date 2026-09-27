@@ -16,6 +16,10 @@ class SpotListCard extends StatelessWidget {
     this.onBookmarkToggle,
     this.liked = false,
     this.bookmarked = false,
+    this.showLike = true,
+    this.bookmarkIconBorder = Icons.bookmark_border_rounded,
+    this.bookmarkIconFilled = Icons.bookmark_rounded,
+    this.showStatusBadge = false,
   });
 
   final Spot spot;
@@ -24,6 +28,10 @@ class SpotListCard extends StatelessWidget {
   final ValueChanged<bool>? onBookmarkToggle;
   final bool liked;
   final bool bookmarked;
+  final bool showLike;
+  final IconData bookmarkIconBorder;
+  final IconData bookmarkIconFilled;
+  final bool showStatusBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -47,123 +55,143 @@ class SpotListCard extends StatelessWidget {
       ),
     );
 
+    final hasActions =
+        onLikeToggle != null || onBookmarkToggle != null;
+
     return Material(
       color: theme.colorScheme.surfaceContainer,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: thumbUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: thumbUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) => Container(
-                                color: theme.colorScheme.surfaceContainerHigh,
-                              ),
-                              errorWidget: (_, _, _) => fallback,
-                            )
-                          : fallback,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: onTap,
+                    child: Row(
                       children: [
-                        Text(
-                          spot.name.toUpperCase(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(
-                            textStyle:
-                                theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: thumbUrl != null
+                                ? CachedNetworkImage(
+                                    imageUrl: thumbUrl,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, _) => Container(
+                                      color: theme
+                                          .colorScheme.surfaceContainerHigh,
+                                    ),
+                                    errorWidget: (_, _, _) => fallback,
+                                  )
+                                : fallback,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          spot.type.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        if (spot.authorDisplayName != null)
-                          Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              UserAvatar(
-                                url: spot.authorAvatarUrl,
-                                fallbackSeed: spot.authorDisplayName!,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  'Por @${spot.authorDisplayName}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.55),
-                                    fontWeight: FontWeight.w600,
+                              Text(
+                                spot.name.toUpperCase(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  textStyle:
+                                      theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 18,
-                              color: Color(0xFFFBBF24),
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              spot.ratingsCount == 0
-                                  ? 'Sin reseñas'
-                                  : spot.avgRating.toStringAsFixed(1),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (spot.ratingsCount > 0) ...[
-                              const SizedBox(width: 6),
+                              const SizedBox(height: 2),
                               Text(
-                                '(${spot.ratingsCount})',
+                                spot.type.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.55),
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
+                              if (spot.authorDisplayName != null)
+                                Row(
+                                  children: [
+                                    UserAvatar(
+                                      url: spot.authorAvatarUrl,
+                                      fallbackSeed: spot.authorDisplayName!,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        'Por @${spot.authorDisplayName}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.55),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    size: 18,
+                                    color: Color(0xFFFBBF24),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    spot.ratingsCount == 0
+                                        ? 'Sin reseñas'
+                                        : spot.avgRating.toStringAsFixed(1),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (spot.ratingsCount > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '(${spot.ratingsCount})',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.55),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  if (onLikeToggle != null || onBookmarkToggle != null)
-                    Column(
+                ),
+                if (showStatusBadge)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: _StatusBadge(status: spot.status),
+                  )
+                else if (hasActions)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (onLikeToggle != null)
+                        if (showLike && onLikeToggle != null)
                           IconButton(
                             tooltip: liked ? 'Quitar like' : 'Me gusta',
                             icon: Icon(
@@ -192,13 +220,11 @@ class SpotListCard extends StatelessWidget {
                         if (onBookmarkToggle != null) ...[
                           const SizedBox(height: 4),
                           IconButton(
-                            tooltip: bookmarked
-                                ? 'Quitar favorito'
-                                : 'Agregar favorito',
+                            tooltip: bookmarked ? 'Quitar favorito' : 'Favorito',
                             icon: Icon(
                               bookmarked
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
+                                  ? bookmarkIconFilled
+                                  : bookmarkIconBorder,
                               color: bookmarked
                                   ? theme.colorScheme.primary
                                   : theme.colorScheme.onSurface
@@ -210,12 +236,12 @@ class SpotListCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
-            if (showBanner) _StatusBanner(spot: spot),
-          ],
-        ),
+          ),
+          if (showBanner) _StatusBanner(spot: spot),
+        ],
       ),
     );
   }
@@ -225,6 +251,65 @@ String _formatCount(int n) {
   if (n < 1000) return '$n';
   if (n < 10000) return '${(n / 1000).toStringAsFixed(1)}k';
   return '${(n / 1000).toStringAsFixed(0)}k';
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final SpotStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final Color bg;
+    final Color fg;
+    final IconData icon;
+    final String label;
+    switch (status) {
+      case SpotStatus.approved:
+        bg = const Color(0xFFDCFCE7);
+        fg = const Color(0xFF166534);
+        icon = Icons.check_circle_rounded;
+        label = 'Aprobado';
+        break;
+      case SpotStatus.pending:
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFF92400E);
+        icon = Icons.hourglass_top_rounded;
+        label = 'Pendiente';
+        break;
+      case SpotStatus.rejected:
+        bg = theme.colorScheme.errorContainer;
+        fg = theme.colorScheme.onErrorContainer;
+        icon = Icons.cancel_rounded;
+        label = 'Rechazado';
+        break;
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: fg, size: 20),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatusBanner extends StatelessWidget {

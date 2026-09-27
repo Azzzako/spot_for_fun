@@ -91,14 +91,18 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _ProfileHeader extends StatelessWidget {
+class _ProfileHeader extends ConsumerWidget {
   const _ProfileHeader({required this.profile, required this.spotCount});
   final Profile profile;
   final int spotCount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final favoriteCount =
+        ref.watch(myFavoriteSpotsProvider).valueOrNull?.length ?? 0;
+    final ratingsCount =
+        ref.watch(myRatingsProvider).valueOrNull?.length ?? 0;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
       child: Column(
@@ -129,9 +133,11 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               _StatColumn(value: spotCount.toString(), label: 'Spots'),
               _StatDivider(),
-              const _StatColumn(value: '0', label: 'Guardados'),
+              _StatColumn(
+                  value: favoriteCount.toString(), label: 'Favoritos'),
               _StatDivider(),
-              const _StatColumn(value: '0', label: 'Reseñas'),
+              _StatColumn(
+                  value: ratingsCount.toString(), label: 'Reseñas'),
             ],
           ),
         ],
@@ -251,11 +257,7 @@ class _MySpotsTab extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final s = spots[i];
-          return OpenSpotCard(
-            spot: s,
-            liked: s.isLiked,
-            bookmarked: s.isFavorited,
-          );
+          return OpenSpotCard(spot: s, showStatusBadge: true);
         },
       ),
     );
@@ -284,7 +286,7 @@ class _FavoritesTab extends ConsumerWidget {
         icon: Icons.favorite_border,
         title: 'Aún no tienes favoritos',
         subtitle:
-            'Toca el ícono de marcador en un spot para guardarlo aquí.',
+            'Toca el ícono de corazón en un spot para guardarlo aquí.',
       );
     }
     return RefreshIndicator(
@@ -299,6 +301,9 @@ class _FavoritesTab extends ConsumerWidget {
             spot: s,
             liked: s.isLiked,
             bookmarked: s.isFavorited,
+            showLike: false,
+            bookmarkIconBorder: Icons.favorite_border_rounded,
+            bookmarkIconFilled: Icons.favorite_rounded,
           );
         },
       ),

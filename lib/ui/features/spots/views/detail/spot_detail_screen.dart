@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/data/repositories/social_repository.dart';
 import 'package:spot_for_fun/data/repositories/spot_rating_repository.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
+import 'package:spot_for_fun/ui/features/social/view_models/social_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/widgets/add_spot_photo_sheet.dart';
@@ -21,7 +23,14 @@ import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 final spotByIdProvider =
     FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
   final repo = ref.watch(spotRepositoryProvider);
-  return repo.fetchById(id);
+  final likedIds = await ref.watch(myLikedSpotIdsProvider.future);
+  final favoritedIds =
+      await ref.watch(myFavoritedSpotIdsProvider.future);
+  return repo.fetchById(
+    id,
+    likedIds: likedIds,
+    favoritedIds: favoritedIds,
+  );
 });
 
 final visibleRatingsProvider = FutureProvider.family
@@ -535,19 +544,30 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _ActionRow extends StatelessWidget {
+class _ActionRow extends ConsumerWidget {
   const _ActionRow({required this.spot});
   final Spot spot;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isFavorited = spot.isFavorited;
+
     return Row(
       children: [
         Expanded(
           child: _ActionButton(
-            icon: Icons.bookmark_border_rounded,
-            label: 'Guardar',
-            onTap: () => _stub(context, 'Guardar'),
+            icon: isFavorited
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            label: isFavorited ? 'Quitar favorito' : 'Favorito',
+            iconColor: isFavorited ? theme.colorScheme.primary : null,
+            onTap: () => ref
+                .read(socialViewModelProvider.notifier)
+                .toggleFavorite(
+                  spotId: spot.id,
+                  currentlyFavorited: isFavorited,
+                ),
           ),
         ),
         const SizedBox(width: 10),
@@ -584,11 +604,13 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -604,7 +626,7 @@ class _ActionButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22),
+              Icon(icon, size: 22, color: iconColor),
               const SizedBox(height: 4),
               Text(
                 label,

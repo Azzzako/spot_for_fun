@@ -22,6 +22,10 @@ class OpenSpotCard extends ConsumerWidget {
     this.liked = false,
     this.onBookmarkToggle,
     this.onLikeToggle,
+    this.showLike = true,
+    this.bookmarkIconBorder = Icons.bookmark_border_rounded,
+    this.bookmarkIconFilled = Icons.bookmark_rounded,
+    this.showStatusBadge = false,
   });
 
   final Spot spot;
@@ -29,6 +33,10 @@ class OpenSpotCard extends ConsumerWidget {
   final bool liked;
   final ValueChanged<bool>? onBookmarkToggle;
   final ValueChanged<bool>? onLikeToggle;
+  final bool showLike;
+  final IconData bookmarkIconBorder;
+  final IconData bookmarkIconFilled;
+  final bool showStatusBadge;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,6 +54,10 @@ class OpenSpotCard extends ConsumerWidget {
       bookmarked: bookmarked,
       onLikeToggle: onLikeToggle,
       onBookmarkToggle: onBookmarkToggle,
+      showLike: showLike,
+      bookmarkIconBorder: bookmarkIconBorder,
+      bookmarkIconFilled: bookmarkIconFilled,
+      showStatusBadge: showStatusBadge,
     );
 
     if (reducedMotion) return card;
@@ -71,6 +83,10 @@ class OpenSpotCard extends ConsumerWidget {
           onTap: action,
           liked: liked,
           bookmarked: bookmarked,
+          showLike: showLike,
+          bookmarkIconBorder: bookmarkIconBorder,
+          bookmarkIconFilled: bookmarkIconFilled,
+          showStatusBadge: showStatusBadge,
           onLikeToggle: (newVal) {
             ref
                 .read(socialViewModelProvider.notifier)

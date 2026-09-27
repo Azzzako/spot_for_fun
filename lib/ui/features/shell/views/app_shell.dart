@@ -55,17 +55,19 @@ class AppShell extends StatelessWidget {
           child: navigationShell,
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'create-spot',
-        onPressed: () => context.push(AppRoutes.spotCreate),
-        elevation: 6,
-        child: const Icon(Icons.add, size: 30),
-      ).animate().scale(
-            duration: 320.ms,
-            begin: const Offset(0.6, 0.6),
-            end: const Offset(1, 1),
-            curve: Curves.easeOutBack,
-          ).fadeIn(duration: 200.ms),
+      floatingActionButton: navigationShell.currentIndex == 0
+          ? FloatingActionButton(
+              heroTag: 'create-spot',
+              onPressed: () => context.push(AppRoutes.spotCreate),
+              elevation: 6,
+              child: const Icon(Icons.add, size: 30),
+            ).animate().scale(
+                  duration: 320.ms,
+                  begin: const Offset(0.6, 0.6),
+                  end: const Offset(1, 1),
+                  curve: Curves.easeOutBack,
+                ).fadeIn(duration: 200.ms)
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
