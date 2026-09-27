@@ -53,8 +53,9 @@ class _SupabaseSetupRequired extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Compila la app con:\n'
-                  'flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=...',
+                  'Crea un archivo .env en la raíz con:\n'
+                  'SUPABASE_URL=...\n'
+                  'SUPABASE_PUBLISHABLE_KEY=...',
                   textAlign: TextAlign.center,
                 ),
               ],

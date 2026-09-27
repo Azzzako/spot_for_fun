@@ -1,15 +1,25 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppEnv {
   AppEnv._();
 
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: '',
-  );
+  static String get supabaseUrl {
+    final fromEnv = const String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: '',
+    );
+    if (fromEnv.isNotEmpty) return fromEnv;
+    return dotenv.env['SUPABASE_URL'] ?? '';
+  }
 
-  static const String supabasePublishableKey = String.fromEnvironment(
-    'SUPABASE_PUBLISHABLE_KEY',
-    defaultValue: '',
-  );
+  static String get supabasePublishableKey {
+    final fromEnv = const String.fromEnvironment(
+      'SUPABASE_PUBLISHABLE_KEY',
+      defaultValue: '',
+    );
+    if (fromEnv.isNotEmpty) return fromEnv;
+    return dotenv.env['SUPABASE_PUBLISHABLE_KEY'] ?? '';
+  }
 
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
