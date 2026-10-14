@@ -1,50 +1,11 @@
 -- =========================================================
--- Spot For Fun — initial migration (safe re-run)
--- Limpia objetos previos antes de crear. Idempotente total.
+-- Spot For Fun — initial migration
+-- Not re-runnable on purpose: on an existing database it stops at the
+-- first "already exists" instead of dropping data. To wipe a dev
+-- database use supabase/scripts/reset_dev_database.sql.
 -- =========================================================
 
 create extension if not exists "pgcrypto";
-
--- ----- preflight: drop objects safely -----
-drop function if exists public.handle_new_user()           cascade;
-drop function if exists public.recompute_spot_rating(uuid) cascade;
-drop function if exists public.spot_ratings_aiud()         cascade;
-drop function if exists public.touch_updated_at()          cascade;
-drop function if exists public.is_admin()                  cascade;
-
-drop table if exists public.spot_favorites cascade;
-drop table if exists public.spot_reports   cascade;
-drop table if exists public.spot_ratings   cascade;
-drop table if exists public.spot_likes     cascade;
-drop table if exists public.spot_photos    cascade;
-drop table if exists public.spots          cascade;
-drop table if exists public.profiles       cascade;
-
-drop type if exists user_role        cascade;
-drop type if exists spot_type        cascade;
-drop type if exists spot_difficulty  cascade;
-drop type if exists best_time_slot   cascade;
-drop type if exists spot_status      cascade;
-drop type if exists report_status    cascade;
-
-do $$
-begin
-  if exists (
-    select 1 from pg_trigger t
-    join pg_class c on c.oid = t.tgrelid
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'auth' and c.relname = 'users' and t.tgname = 'on_auth_user_created'
-  ) then
-    execute 'drop trigger on_auth_user_created on auth.users';
-  end if;
-end $$;
-
-do $$
-begin
-  if exists (select 1 from storage.buckets where id = 'spot-photos') then
-    perform storage.delete_bucket('spot-photos');
-  end if;
-end $$;
 
 -- =========================================================
 -- enums

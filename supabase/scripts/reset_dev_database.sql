@@ -1,3 +1,12 @@
+-- =========================================================
+-- !!! DESTRUCTIVE — DEV ONLY !!!
+-- Drops every Spot For Fun table, function, type, trigger and the
+-- spot-photos bucket. Running this against the live project deletes
+-- all users' spots, photos, reviews and favorites.
+-- Moved out of supabase/migrations (was 0000_cleanup.sql) so it can
+-- never be applied by mistake as part of the migration sequence.
+-- =========================================================
+
 -- Limpia TODO lo del intento previo. Maneja estado parcial.
 -- El orden correcto: drop functions cascade (mata sus triggers),
 -- luego drop tables, luego drop types. trigger de auth.users aparte.
