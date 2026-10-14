@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/providers/onboarding_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/shared/widgets/brand_wordmark.dart';
+import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
+import 'package:spot_for_fun/ui/shared/widgets/staggered_entrance.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
@@ -27,8 +32,8 @@ class OnboardingScreen extends ConsumerWidget {
       icon: Icons.rate_review_outlined,
       title: 'Reseña y comparte',
       body:
-          'Califica los spots que visites, deja tu like y guarda tus '
-          'favoritos. Tus aportes ayudan a todos.',
+          'Califica los spots que visites y guarda tus favoritos. '
+          'Tus aportes ayudan a toda la comunidad.',
     ),
   ];
 
@@ -42,49 +47,51 @@ class OnboardingScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 8),
-              Text(
-                'Bienvenido a Spot For Fun',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-                textAlign: TextAlign.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const BrandWordmark(size: 32),
+                  const SizedBox(height: 28),
+                  Text(
+                    'BIENVENIDO\nA LA CALLE',
+                    style: theme.textTheme.displayMedium,
+                  ),
+                  const SizedBox(height: 14),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: TapeLabel('Encuentra. Explora. Patina.'),
+                  ),
+                ].staggeredEntrance(context),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Encuentra. Explora. Patina.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                ),
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: _tips
-                      .map(
-                        (t) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          child: _TipCard(tip: t),
-                        ),
-                      )
-                      .toList(),
+                  children: [
+                    for (var i = 0; i < _tips.length; i++)
+                      _TipCard(index: i + 1, tip: _tips[i]),
+                  ].staggeredEntrance(
+                    context,
+                    delay: const Duration(milliseconds: 420),
+                    interval: const Duration(milliseconds: 120),
+                  ),
                 ),
               ),
-              FilledButton(
-                onPressed: () async {
-                  await ref
-                      .read(onboardingCompletedProvider.notifier)
-                      .markSeen();
-                  if (!context.mounted) return;
-                  // The router redirect sends signed-out users to login.
-                  context.go(AppRoutes.map);
-                },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Comenzar'),
+              ...[
+                FilledButton(
+                  onPressed: () async {
+                    await ref
+                        .read(onboardingCompletedProvider.notifier)
+                        .markSeen();
+                    if (!context.mounted) return;
+                    // The router redirect sends signed-out users to login.
+                    context.go(AppRoutes.map);
+                  },
+                  child: const Text('COMENZAR'),
                 ),
+              ].staggeredEntrance(
+                context,
+                delay: const Duration(milliseconds: 800),
               ),
             ],
           ),
@@ -106,50 +113,61 @@ class _OnboardingTip {
 }
 
 class _TipCard extends StatelessWidget {
-  const _TipCard({required this.tip});
+  const _TipCard({required this.index, required this.tip});
+  final int index;
   final _OnboardingTip tip;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            tip.icon,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                tip.title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                tip.body,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 52,
+            child: Text(
+              index.toString().padLeft(2, '0'),
+              style: AppTheme.display(30, color: AppColors.tape),
+            ),
           ),
-        ),
-      ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      tip.icon,
+                      size: 20,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      tip.title.toUpperCase(),
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  tip.body,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

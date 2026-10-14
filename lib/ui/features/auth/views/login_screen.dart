@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/shared/widgets/brand_wordmark.dart';
+import 'package:spot_for_fun/ui/shared/widgets/staggered_entrance.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/password_reset_view_model.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
 
@@ -89,45 +91,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 32),
-                    Center(
-                      child: Container(
-                        width: 88,
-                        height: 88,
-                        decoration: BoxDecoration(
-                          color: AppColors.brandInk,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.skateboarding,
-                          color: Colors.white,
-                          size: 44,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
+                    const Center(child: BrandWordmark(size: 44)),
+                    const SizedBox(height: 44),
                     Text(
-                      'SPOT FOR FUN',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.4,
-                      ),
+                      'BIENVENIDO\nDE VUELTA',
+                      style: theme.textTheme.displaySmall,
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 10),
                     Text(
-                      'Bienvenido de vuelta',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Inicia sesión para continuar',
+                      'Inicia sesión para seguir rodando.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.65),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -180,53 +155,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 height: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.4,
-                                  color: Colors.white,
+                                  color: AppColors.asphalt,
                                 ),
                               )
-                            : const Text('Iniciar sesión'),
+                            : const Text('INICIAR SESIÓN'),
                       ),
                     ),
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        Expanded(
-                          child: Divider(
-                            color:
-                                theme.colorScheme.outline.withValues(alpha: 0.7),
-                          ),
-                        ),
+                        const Expanded(child: Divider()),
                         Padding(
                           padding:
                               const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'o continuar con',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                            'O CONTINÚA CON',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
-                        Expanded(
-                          child: Divider(
-                            color:
-                                theme.colorScheme.outline.withValues(alpha: 0.7),
-                          ),
-                        ),
+                        const Expanded(child: Divider()),
                       ],
                     ),
                     const SizedBox(height: 18),
                     _SocialButton(
                       icon: Icons.g_mobiledata_rounded,
-                      label: 'Continuar con Google',
+                      label: 'GOOGLE',
                       enabled: !loading,
                       onPressed: _signInWithGoogle,
-                    ),
-                    const SizedBox(height: 10),
-                    _SocialButton(
-                      icon: Icons.apple,
-                      label: 'Continuar con Apple (próximamente)',
-                      enabled: false,
-                      onPressed: null,
                     ),
                     const SizedBox(height: 24),
                     Center(
@@ -237,8 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: RichText(
                           text: TextSpan(
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                             children: const [
                               TextSpan(text: '¿No tienes cuenta? '),
@@ -246,6 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 text: 'Regístrate',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w800,
+                                  color: AppColors.tape,
                                 ),
                               ),
                             ],
@@ -253,7 +210,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
-                  ],
+                  ].staggeredEntrance(context),
                 ),
               ),
             ),
@@ -311,7 +268,7 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              sent ? 'Revisa tu correo' : 'Recuperar contraseña',
+              sent ? 'REVISA TU CORREO' : 'RECUPERAR CONTRASEÑA',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 6),
@@ -389,10 +346,10 @@ class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
                       : _send,
               child: Text(
                 loading
-                    ? 'Enviando…'
+                    ? 'ENVIANDO…'
                     : sent
-                        ? 'Entendido'
-                        : 'Enviar enlace',
+                        ? 'ENTENDIDO'
+                        : 'ENVIAR ENLACE',
               ),
             ),
             const SizedBox(height: 24),
@@ -466,30 +423,11 @@ class _SocialButton extends StatelessWidget {
     final theme = Theme.of(context);
     final fg = enabled
         ? theme.colorScheme.onSurface
-        : theme.colorScheme.onSurface.withValues(alpha: 0.4);
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: fg,
-          side: BorderSide(
-            color: theme.colorScheme.outline,
-            width: 1.2,
-          ),
-        ),
-        onPressed: onPressed,
-        icon: Icon(icon, size: 22, color: fg),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: fg,
-          ),
-        ),
-      ),
+        : theme.colorScheme.onSurfaceVariant;
+    return OutlinedButton.icon(
+      onPressed: enabled ? onPressed : null,
+      icon: Icon(icon, size: 28, color: fg),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 }

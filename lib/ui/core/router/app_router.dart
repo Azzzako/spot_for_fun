@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent;
 
 import 'package:spot_for_fun/ui/features/admin/views/admin_pending_screen.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
+import 'package:spot_for_fun/ui/core/router/page_transitions.dart';
 import 'package:spot_for_fun/ui/features/auth/views/login_screen.dart';
 import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
 import 'package:spot_for_fun/ui/features/auth/views/reset_password_screen.dart';
@@ -14,43 +15,10 @@ import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
 import 'package:spot_for_fun/ui/features/settings/views/coming_soon_screen.dart';
 import 'package:spot_for_fun/ui/features/settings/views/settings_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
-import 'package:spot_for_fun/ui/features/shop/views/shop_screen.dart';
 import 'package:spot_for_fun/ui/features/splash/views/splash_screen.dart';
 import 'package:spot_for_fun/ui/features/onboarding/views/onboarding_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/create/create_spot_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.dart';
-
-const _kFadeThrough = Duration(milliseconds: 300);
-const _kFadeThroughReverse = Duration(milliseconds: 250);
-
-CustomTransitionPage<T> fadeThroughPage<T>({
-  required Widget child,
-  required GoRouterState state,
-}) {
-  return CustomTransitionPage<T>(
-    key: state.pageKey,
-    child: child,
-    transitionDuration: _kFadeThrough,
-    reverseTransitionDuration: _kFadeThroughReverse,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return AnimatedBuilder(
-        animation: Listenable.merge([animation, secondaryAnimation]),
-        builder: (context, _) {
-          final incoming = Curves.easeInOutCubic.transform(animation.value);
-          final outgoing =
-              Curves.easeInOutCubic.transform(secondaryAnimation.value);
-          final opacity = (incoming * (1.0 - outgoing)).clamp(0.0, 1.0);
-          final scale = 0.92 + 0.08 * incoming;
-          return Opacity(
-            opacity: opacity,
-            child: Transform.scale(scale: scale, child: child),
-          );
-        },
-        child: child,
-      );
-    },
-  );
-}
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _mapaNavigatorKey = GlobalKey<NavigatorState>();
@@ -66,7 +34,6 @@ class AppRoutes {
   static const spotCreate = '/spots/create';
   static const mySpots = '/spots/mine';
   static const profile = '/profile';
-  static const shop = '/shop';
   static const onboarding = '/onboarding';
   static const adminPending = '/admin/pending';
   static const settings = '/settings';
@@ -113,12 +80,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.splash,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const SplashScreen(),
+        pageBuilder: (context, state) => smoothPage(
+          state: state,
+          child: const SplashScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.onboarding,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const OnboardingScreen(),
         ),
@@ -150,7 +120,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.login,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const LoginScreen(),
         ),
@@ -158,7 +128,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.register,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const RegisterScreen(),
         ),
@@ -166,7 +136,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.resetPassword,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const ResetPasswordScreen(),
         ),
@@ -174,7 +144,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.spotCreate,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const CreateSpotScreen(),
         ),
@@ -182,7 +152,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/spots/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: SpotDetailScreen(spotId: state.pathParameters['id']!),
         ),
@@ -193,14 +163,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         redirect: (_, _) => AppRoutes.profile,
       ),
       GoRoute(
-        path: AppRoutes.shop,
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const ShopScreen(),
-      ),
-      GoRoute(
         path: AppRoutes.adminPending,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const AdminPendingScreen(),
         ),
@@ -208,7 +173,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settings,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const SettingsScreen(),
         ),
@@ -216,7 +181,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsEditProfile,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const EditProfileScreen(),
         ),
@@ -224,7 +189,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsPrivacy,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const ComingSoonScreen(
             title: 'Privacidad',
@@ -235,7 +200,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsNotifications,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const ComingSoonScreen(
             title: 'Notificaciones',
@@ -246,7 +211,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsHelp,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const ComingSoonScreen(
             title: 'Ayuda',
@@ -257,7 +222,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsAbout,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => fadeThroughPage(
+        pageBuilder: (context, state) => smoothPage(
           state: state,
           child: const ComingSoonScreen(
             title: 'Acerca de',

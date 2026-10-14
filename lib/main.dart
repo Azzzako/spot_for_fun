@@ -5,16 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'package:spot_for_fun/ui/core/config/app_bootstrap.dart';
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
-import 'package:spot_for_fun/ui/core/providers/theme_mode_pref_provider.dart';
 
 Future<void> main() async {
   final result = await AppBootstrap.init();
 
-  final overrides = <Override>[
-    themeModePrefProvider.overrideWith(
-      (ref) => ThemeModePrefNotifier(result.prefs),
-    ),
-  ];
+  final overrides = <Override>[];
 
   if (result.supabaseReady) {
     final client = Supabase.instance.client;

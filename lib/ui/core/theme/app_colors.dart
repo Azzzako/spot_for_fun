@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 
+/// Urban palette (design canvas "Urbano"): asphalt and concrete grounds,
+/// bone text, safety-tape yellow for the one primary action and anything
+/// marked, moss for approved states.
 class AppColors {
   AppColors._();
 
-  static const Color seedLight = Color(0xFF111827);
-  static const Color seedDark = Color(0xFFE5E7EB);
+  static const Color asphalt = Color(0xFF111111);
+  static const Color navBar = Color(0xFF0B0B0B);
+  static const Color concrete = Color(0xFF1C1C1C);
+  static const Color concreteHigh = Color(0xFF262626);
+  static const Color line = Color(0xFF2E2E2E);
+  static const Color lineStrong = Color(0xFF3A3A3A);
 
-  static const Color accent = Color(0xFFEF4444);
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
+  static const Color bone = Color(0xFFF1EFE8);
+  static const Color boneMuted = Color(0xFFA3A39B);
 
-  // Brand palette (assets/identity/estilo.png).
-  static const Color brandInk = Color(0xFF121212);
-  static const Color brandInkSoft = Color(0xFF2A2A2A);
-  static const Color brandForest = Color(0xFF4A5D4E);
-  static const Color brandForestDeep = Color(0xFF3A4A3D);
-  static const Color brandBeige = Color(0xFFE8E4D7);
-  static const Color brandBeigeSoft = Color(0xFFEFEBDF);
-  static const Color brandGold = Color(0xFFF2C14E);
-  static const Color brandCream = Color(0xFFF7F7F2);
-  static const Color brandSurface = Color(0xFFFFFFFF);
+  static const Color tape = Color(0xFFF2C14E);
+  static const Color moss = Color(0xFF8FB07A);
+  static const Color danger = Color(0xFFE5674F);
 }

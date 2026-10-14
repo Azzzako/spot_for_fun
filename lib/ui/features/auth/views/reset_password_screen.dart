@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/password_reset_view_model.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
 
@@ -65,7 +66,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
           icon: const Icon(Icons.close),
           onPressed: loading ? null : _cancel,
         ),
-        title: const Text('Nueva contraseña'),
+        title: const Text('NUEVA CONTRASEÑA'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -78,7 +79,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 Text(
                   'Elige una contraseña nueva para tu cuenta.',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -135,10 +136,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                             width: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.4,
-                              color: Colors.white,
+                              color: AppColors.asphalt,
                             ),
                           )
-                        : const Text('Guardar contraseña'),
+                        : const Text('GUARDAR CONTRASEÑA'),
                   ),
                 ),
               ],

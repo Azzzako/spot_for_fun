@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
+import 'package:spot_for_fun/ui/shared/widgets/staggered_entrance.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_up_view_model.dart';
 import 'package:spot_for_fun/ui/features/profile/view_models/edit_profile_view_model.dart'
     show usernameRegex;
@@ -45,7 +47,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Verifica tu correo'),
+          title: const Text('VERIFICA TU CORREO'),
           content: Text(
             'Te enviamos un correo a ${_emailCtrl.text.trim()}. '
             'Confírmalo antes de iniciar sesión.',
@@ -105,37 +107,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: AppColors.brandInk,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.skateboarding,
-                          color: Colors.white,
-                          size: 36,
-                        ),
-                      ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: TapeLabel('Nuevo en la crew'),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
                     Text(
-                      'Únete a la comunidad',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      'ÚNETE A\nLA COMUNIDAD',
+                      style: theme.textTheme.displaySmall,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
                     Text(
-                      'Verifica tu correo para activar la cuenta.',
-                      textAlign: TextAlign.center,
+                      'Te enviaremos un correo para activar la cuenta.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.65),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -197,10 +182,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 height: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.4,
-                                  color: Colors.white,
+                                  color: AppColors.asphalt,
                                 ),
                               )
-                            : const Text('Crear cuenta'),
+                            : const Text('CREAR CUENTA'),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -212,21 +197,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         child: RichText(
                           text: TextSpan(
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.7),
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                             children: const [
                               TextSpan(text: '¿Ya tienes cuenta? '),
                               TextSpan(
                                 text: 'Inicia sesión',
-                                style: TextStyle(fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.tape,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ].staggeredEntrance(context),
                 ),
               ),
             ),
