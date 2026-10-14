@@ -205,7 +205,7 @@ class SpotListCard extends StatelessWidget {
                             ),
                             onPressed: () => onLikeToggle?.call(!liked),
                           ),
-                        if (spot.likesCount > 0)
+                        if (showLike && spot.likesCount > 0)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(

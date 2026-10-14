@@ -283,10 +283,10 @@ class _FavoritesTab extends ConsumerWidget {
     }
     if (spots.isEmpty) {
       return const _EmptyTab(
-        icon: Icons.favorite_border,
+        icon: Icons.bookmark_border_rounded,
         title: 'Aún no tienes favoritos',
         subtitle:
-            'Toca el ícono de corazón en un spot para guardarlo aquí.',
+            'Toca el ícono de guardar en un spot para tenerlo aquí.',
       );
     }
     return RefreshIndicator(
@@ -297,14 +297,7 @@ class _FavoritesTab extends ConsumerWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final s = spots[i];
-          return OpenSpotCard(
-            spot: s,
-            liked: s.isLiked,
-            bookmarked: s.isFavorited,
-            showLike: false,
-            bookmarkIconBorder: Icons.favorite_border_rounded,
-            bookmarkIconFilled: Icons.favorite_rounded,
-          );
+          return OpenSpotCard(spot: s);
         },
       ),
     );

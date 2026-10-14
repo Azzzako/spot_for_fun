@@ -14,53 +14,56 @@ import 'package:spot_for_fun/ui/features/spots/views/detail/spot_detail_screen.d
 ///
 /// Falls back to a plain push when the platform reports reduced motion
 /// (MediaQuery.disableAnimations), so the experience stays accessible.
+///
+/// Favorite state comes from [Spot.isFavorited] and the toggle goes
+/// through [SocialViewModel].
 class OpenSpotCard extends ConsumerWidget {
   const OpenSpotCard({
     super.key,
     required this.spot,
-    this.bookmarked = false,
-    this.liked = false,
-    this.onBookmarkToggle,
-    this.onLikeToggle,
-    this.showLike = true,
-    this.bookmarkIconBorder = Icons.bookmark_border_rounded,
-    this.bookmarkIconFilled = Icons.bookmark_rounded,
     this.showStatusBadge = false,
   });
 
   final Spot spot;
-  final bool bookmarked;
-  final bool liked;
-  final ValueChanged<bool>? onBookmarkToggle;
-  final ValueChanged<bool>? onLikeToggle;
-  final bool showLike;
-  final IconData bookmarkIconBorder;
-  final IconData bookmarkIconFilled;
   final bool showStatusBadge;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final reducedMotion = MediaQuery.of(context).disableAnimations;
+    final social = ref.read(socialViewModelProvider.notifier);
 
     void openDetail() {
       GoRouter.of(context).push(AppRoutes.spotDetail(spot.id));
     }
 
-    final card = SpotListCard(
-      spot: spot,
-      onTap: reducedMotion ? openDetail : null,
-      liked: liked,
-      bookmarked: bookmarked,
-      onLikeToggle: onLikeToggle,
-      onBookmarkToggle: onBookmarkToggle,
-      showLike: showLike,
-      bookmarkIconBorder: bookmarkIconBorder,
-      bookmarkIconFilled: bookmarkIconFilled,
-      showStatusBadge: showStatusBadge,
-    );
+    Future<void> report(Future<bool> result) async {
+      final messenger = ScaffoldMessenger.of(context);
+      if (await result) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo actualizar. Inténtalo de nuevo.'),
+          ),
+        );
+    }
 
-    if (reducedMotion) return card;
+    Widget buildCard(VoidCallback? onTap) => SpotListCard(
+          spot: spot,
+          onTap: onTap,
+          bookmarked: spot.isFavorited,
+          showLike: false,
+          showStatusBadge: showStatusBadge,
+          onBookmarkToggle: (_) => report(
+            social.toggleFavorite(
+              spotId: spot.id,
+              currentlyFavorited: spot.isFavorited,
+            ),
+          ),
+        );
+
+    if (reducedMotion) return buildCard(openDetail);
 
     return OpenContainer<void>(
       transitionType: ContainerTransitionType.fadeThrough,
@@ -74,36 +77,7 @@ class OpenSpotCard extends ConsumerWidget {
       closedElevation: 0,
       openElevation: 0,
       openBuilder: (context, _) => SpotDetailScreen(spotId: spot.id),
-      closedBuilder: (context, action) {
-        // For the open-container path the card's onTap is wired to the
-        // OpenContainer action. The like/favorite handlers still need
-        // access to the VM, so route them through the outer widget.
-        return SpotListCard(
-          spot: spot,
-          onTap: action,
-          liked: liked,
-          bookmarked: bookmarked,
-          showLike: showLike,
-          bookmarkIconBorder: bookmarkIconBorder,
-          bookmarkIconFilled: bookmarkIconFilled,
-          showStatusBadge: showStatusBadge,
-          onLikeToggle: (newVal) {
-            ref
-                .read(socialViewModelProvider.notifier)
-                .toggleLike(spotId: spot.id, currentlyLiked: liked);
-            onLikeToggle?.call(newVal);
-          },
-          onBookmarkToggle: (newVal) {
-            ref
-                .read(socialViewModelProvider.notifier)
-                .toggleFavorite(
-                  spotId: spot.id,
-                  currentlyFavorited: bookmarked,
-                );
-            onBookmarkToggle?.call(newVal);
-          },
-        );
-      },
+      closedBuilder: (context, action) => buildCard(action),
     );
   }
 }

@@ -10,7 +10,7 @@
 --   * insert: counters zeroed, moderation fields cleared, status pending.
 --   * update: server-managed columns keep their previous value.
 --
--- Counter/rating triggers run as security definer (see 0021), so
+-- Counter/rating triggers run as security definer (see 0019, 0020), so
 -- current_user is the function owner there and they pass through.
 -- =========================================================
 

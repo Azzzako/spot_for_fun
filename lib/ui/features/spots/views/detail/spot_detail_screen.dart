@@ -51,7 +51,10 @@ class SpotDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      // Like / favorite invalidate the providers this depends on; keep
+      // showing the current spot while it reloads instead of a spinner.
       body: asyncSpot.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
@@ -230,7 +233,7 @@ class _DetailBody extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    _FavoriteButton(),
+                    _FavoriteButton(spot: spot),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -569,33 +572,14 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _ActionRow extends ConsumerWidget {
+class _ActionRow extends StatelessWidget {
   const _ActionRow({required this.spot});
   final Spot spot;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final isFavorited = spot.isFavorited;
-
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: _ActionButton(
-            icon: isFavorited
-                ? Icons.favorite_rounded
-                : Icons.favorite_border_rounded,
-            label: isFavorited ? 'Quitar favorito' : 'Favorito',
-            iconColor: isFavorited ? theme.colorScheme.primary : null,
-            onTap: () => ref
-                .read(socialViewModelProvider.notifier)
-                .toggleFavorite(
-                  spotId: spot.id,
-                  currentlyFavorited: isFavorited,
-                ),
-          ),
-        ),
-        const SizedBox(width: 10),
         Expanded(
           child: _ActionButton(
             icon: Icons.directions_rounded,
@@ -655,13 +639,11 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +659,7 @@ class _ActionButton extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22, color: iconColor),
+              Icon(icon, size: 22),
               const SizedBox(height: 4),
               Text(
                 label,
@@ -693,35 +675,43 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _FavoriteButton extends StatefulWidget {
-  @override
-  State<_FavoriteButton> createState() => _FavoriteButtonState();
-}
-
-class _FavoriteButtonState extends State<_FavoriteButton> {
-  bool _saved = false;
+class _FavoriteButton extends ConsumerWidget {
+  const _FavoriteButton({required this.spot});
+  final Spot spot;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final saved = spot.isFavorited;
     return IconButton(
-      onPressed: () {
-        setState(() => _saved = !_saved);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(_saved ? 'Guardado' : 'Quitado'),
-              duration: const Duration(seconds: 1),
+      tooltip: saved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      onPressed: () => _reportSocialResult(
+        ScaffoldMessenger.of(context),
+        ref.read(socialViewModelProvider.notifier).toggleFavorite(
+              spotId: spot.id,
+              currentlyFavorited: saved,
             ),
-          );
-      },
+      ),
       icon: Icon(
-        _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-        color: _saved ? theme.colorScheme.primary : null,
+        saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+        color: saved ? theme.colorScheme.primary : null,
       ),
     );
   }
+}
+
+Future<void> _reportSocialResult(
+  ScaffoldMessengerState messenger,
+  Future<bool> result,
+) async {
+  if (await result) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      const SnackBar(
+        content: Text('No se pudo actualizar. Inténtalo de nuevo.'),
+      ),
+    );
 }
 
 class _PhotoGallery extends StatelessWidget {

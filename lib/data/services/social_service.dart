@@ -34,10 +34,12 @@ class SocialService {
   Future<void> likeSpot(String spotId) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw StateError('No autenticado');
-    await _client.from('spot_likes').insert({
-      'spot_id': spotId,
-      'user_id': uid,
-    });
+    // Idempotent: a double tap must not fail on the (spot_id, user_id) PK.
+    await _client.from('spot_likes').upsert(
+      {'spot_id': spotId, 'user_id': uid},
+      onConflict: 'spot_id,user_id',
+      ignoreDuplicates: true,
+    );
   }
 
   Future<void> unlikeSpot(String spotId) async {
@@ -53,10 +55,12 @@ class SocialService {
   Future<void> favoriteSpot(String spotId) async {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw StateError('No autenticado');
-    await _client.from('spot_favorites').insert({
-      'spot_id': spotId,
-      'user_id': uid,
-    });
+    // Idempotent: a double tap must not fail on the (spot_id, user_id) PK.
+    await _client.from('spot_favorites').upsert(
+      {'spot_id': spotId, 'user_id': uid},
+      onConflict: 'spot_id,user_id',
+      ignoreDuplicates: true,
+    );
   }
 
   Future<void> unfavoriteSpot(String spotId) async {
