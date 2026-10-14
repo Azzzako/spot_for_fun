@@ -74,6 +74,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     }
   }
 
+  void _finishWithoutMissingPhotos() {
+    _snack('Tu spot está en revisión');
+    context.go(AppRoutes.profile);
+  }
+
   void _snack(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -86,6 +91,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     final vm = ref.read(createSpotViewModelProvider.notifier);
     final theme = Theme.of(context);
     final busy = state.submitState == SubmitState.uploading;
+    final locked = state.isSpotCreated;
     final canSubmit =
         !busy && state.photos.isNotEmpty;
 
@@ -119,137 +125,149 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _PhotosCard(
-                      photos: state.photos,
-                      onPhotosChanged: vm.setPhotos,
-                    ),
-                    const SizedBox(height: 20),
-                    _Label('Nombre del spot'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nameCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Ej. Escaleras del Parque',
-                      ),
-                      maxLength: 80,
-                      textInputAction: TextInputAction.next,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Requerido';
-                        }
-                        if (v.trim().length < 3) {
-                          return 'Mínimo 3 caracteres';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _Label('Tipo de spot'),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: SpotType.values.map((t) {
-                        final selected = state.type == t;
-                        return _TypeChip(
-                          label: t.label,
-                          selected: selected,
-                          onTap: () => vm.setType(t),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-                    _Label('Ubicación en el mapa'),
-                    const SizedBox(height: 8),
-                    _LocationPreview(
-                      location: state.pickedLocation,
-                      controller: _mapController,
-                      onPick: vm.setPickedLocation,
-                      hydrated: _hydrated,
-                      relocating: state.locating,
-                      onRelocate: () async {
-                        final loc = await vm.relocateFromGps();
-                        if (!mounted || loc == null) return;
-                        _mapController.move(loc, 16);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _Label('Descripción'),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _descCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Cuéntanos algo sobre el spot...',
-                      ),
-                      maxLines: 3,
-                      maxLength: 500,
-                    ),
-                    const SizedBox(height: 20),
-                    _Label('Nivel'),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: SpotDifficulty.values.map((d) {
-                        final selected = state.difficulty == d;
-                        return _TypeChip(
-                          label: d.label,
-                          selected: selected,
-                          onTap: () => vm.setDifficulty(d),
-                        );
-                      }).toList(),
-                    ),
-                    if (state.difficulty == null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Selecciona un nivel.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.error,
-                          ),
+                    // Once the spot exists only the missing photos can be
+                    // retried; editing these fields would have no effect.
+                    AbsorbPointer(
+                      absorbing: locked,
+                      child: Opacity(
+                        opacity: locked ? 0.55 : 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _PhotosCard(
+                              photos: state.photos,
+                              onPhotosChanged: vm.setPhotos,
+                            ),
+                            const SizedBox(height: 20),
+                            _Label('Nombre del spot'),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _nameCtrl,
+                              decoration: const InputDecoration(
+                                hintText: 'Ej. Escaleras del Parque',
+                              ),
+                              maxLength: 80,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Requerido';
+                                }
+                                if (v.trim().length < 3) {
+                                  return 'Mínimo 3 caracteres';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _Label('Tipo de spot'),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: SpotType.values.map((t) {
+                                final selected = state.type == t;
+                                return _TypeChip(
+                                  label: t.label,
+                                  selected: selected,
+                                  onTap: () => vm.setType(t),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 20),
+                            _Label('Ubicación en el mapa'),
+                            const SizedBox(height: 8),
+                            _LocationPreview(
+                              location: state.pickedLocation,
+                              controller: _mapController,
+                              onPick: vm.setPickedLocation,
+                              hydrated: _hydrated,
+                              relocating: state.locating,
+                              onRelocate: () async {
+                                final loc = await vm.relocateFromGps();
+                                if (!mounted || loc == null) return;
+                                _mapController.move(loc, 16);
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            _Label('Descripción'),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _descCtrl,
+                              decoration: const InputDecoration(
+                                hintText: 'Cuéntanos algo sobre el spot...',
+                              ),
+                              maxLines: 3,
+                              maxLength: 500,
+                            ),
+                            const SizedBox(height: 20),
+                            _Label('Nivel'),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: SpotDifficulty.values.map((d) {
+                                final selected = state.difficulty == d;
+                                return _TypeChip(
+                                  label: d.label,
+                                  selected: selected,
+                                  onTap: () => vm.setDifficulty(d),
+                                );
+                              }).toList(),
+                            ),
+                            if (state.difficulty == null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  'Selecciona un nivel.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 20),
+                            _Label('Mejor hora para ir'),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: BestTimeSlot.values.map((b) {
+                                final selected = state.bestTime.contains(b);
+                                return _TypeChip(
+                                  label: b.label,
+                                  selected: selected,
+                                  onTap: () => vm.toggleBestTime(b),
+                                );
+                              }).toList(),
+                            ),
+                            if (state.bestTime.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  'Selecciona al menos un horario.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 20),
+                            _Label('Notas de seguridad (opcional)'),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: _safetyCtrl,
+                              decoration: const InputDecoration(
+                                hintText: 'Notas de seguridad...',
+                              ),
+                              maxLines: 2,
+                              maxLength: 240,
+                            ),
+                          ],
                         ),
                       ),
-                    const SizedBox(height: 20),
-                    _Label('Mejor hora para ir'),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: BestTimeSlot.values.map((b) {
-                        final selected = state.bestTime.contains(b);
-                        return _TypeChip(
-                          label: b.label,
-                          selected: selected,
-                          onTap: () => vm.toggleBestTime(b),
-                        );
-                      }).toList(),
-                    ),
-                    if (state.bestTime.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Selecciona al menos un horario.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    _Label('Notas de seguridad (opcional)'),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _safetyCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Notas de seguridad...',
-                      ),
-                      maxLines: 2,
-                      maxLength: 240,
                     ),
                     if (state.submitState == SubmitState.partialSuccess)
                       _Banner(
                         icon: Icons.warning_amber_rounded,
-                        text:
-                            'Spot creado, pero algunas fotos fallaron:\n${state.errorMessage ?? ''}',
+                        text: state.errorMessage ?? '',
                       ),
                     if (state.submitState == SubmitState.error &&
                         state.errorMessage != null)
@@ -280,9 +298,23 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Publicar spot'),
+                            : Text(
+                                locked ? 'Reintentar fotos' : 'Publicar spot',
+                              ),
                       ),
                     ),
+                    if (locked &&
+                        !busy &&
+                        state.uploadedPhotoIndexes.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: _finishWithoutMissingPhotos,
+                          child: const Text('Continuar sin ellas'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
