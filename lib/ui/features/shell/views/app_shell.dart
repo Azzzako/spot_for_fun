@@ -1,17 +1,40 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:spot_for_fun/ui/core/deeplinks/spot_links.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
 /// Bottom bar: MAPA · [+] · PERFIL. The yellow square in the middle
-/// opens "Agregar spot" from either tab.
-class AppShell extends StatelessWidget {
+/// opens "Agregar spot" from either tab. Also opens a shared spot link
+/// that arrived before the user was signed in (see DeepLinkListener).
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  StatefulNavigationShell get navigationShell => widget.navigationShell;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingLink());
+  }
+
+  void _openPendingLink() {
+    final spotId = ref.read(pendingSpotLinkProvider);
+    if (spotId == null || !mounted) return;
+    ref.read(pendingSpotLinkProvider.notifier).state = null;
+    context.push(AppRoutes.spotDetail(spotId));
+  }
 
   void _goBranch(int index) {
     navigationShell.goBranch(
@@ -22,6 +45,9 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(pendingSpotLinkProvider, (_, next) {
+      if (next != null) _openPendingLink();
+    });
     final current = navigationShell.currentIndex;
     return Scaffold(
       body: PageTransitionSwitcher(

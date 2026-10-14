@@ -57,3 +57,9 @@ skills-lock.json
 # Supabase CLI local cache
 supabase/.temp/
 
+
+# Gradle output at the android/ root (plugins build here too)
+android/build/
+
+# Wrangler local state (Cloudflare share-link Worker)
+cloudflare/**/.wrangler/

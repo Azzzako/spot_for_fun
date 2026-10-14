@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,6 +13,7 @@ import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
+import 'package:spot_for_fun/ui/core/deeplinks/spot_links.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
@@ -101,6 +103,10 @@ class _DetailBody extends ConsumerWidget {
         spot.safetyNotes != null && spot.safetyNotes!.trim().isNotEmpty;
     final hasReject =
         spot.rejectReason != null && spot.rejectReason!.trim().isNotEmpty;
+    // Only approved spots are public, so only those can be shared.
+    final shareLink = spot.status == SpotStatus.approved
+        ? SpotLinks.forSpot(spot.id)
+        : null;
 
     return CustomScrollView(
       slivers: [
@@ -118,6 +124,15 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
           actions: [
+            if (shareLink != null)
+              Padding(
+                padding: const EdgeInsets.all(6),
+                child: _HeroButton(
+                  tooltip: 'Compartir',
+                  icon: Icons.ios_share,
+                  onPressed: () => _share(context, shareLink),
+                ),
+              ),
             if (isOwner)
               Padding(
                 padding: const EdgeInsets.all(6),
@@ -272,6 +287,19 @@ class _DetailBody extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _share(BuildContext context, Uri link) async {
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Mira este spot en Spot4Fun: ${spot.name} '
+            '(${spot.type.label} · ${spot.difficulty.label})\n$link',
+        subject: spot.name,
+        sharePositionOrigin:
+            box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      ),
     );
   }
 

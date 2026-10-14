@@ -1,7 +1,24 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Host of shared spot links (App Links), read from SHARE_BASE_URL in the
+// app's .env so the manifest and the Dart side always agree.
+val shareHost: String = run {
+    val env = rootProject.file("../.env")
+    val url = if (env.exists()) {
+        env.readLines()
+            .firstOrNull { it.startsWith("SHARE_BASE_URL=") }
+            ?.substringAfter("=")
+            ?.trim()
+    } else {
+        null
+    }
+    url?.takeIf { it.isNotEmpty() }?.let { URI(it).host } ?: "share.invalid"
 }
 
 android {
@@ -23,6 +40,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["shareHost"] = shareHost
     }
 
     buildTypes {

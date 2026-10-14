@@ -57,6 +57,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: _AuthListenable(ref),
     debugLogDiagnostics: false,
     redirect: (context, state) {
+      // External links (shared spots, password recovery) are handled by
+      // app_links; if one ever reaches the router as a full URL, boot
+      // normally instead of showing "no routes for location".
+      if (state.uri.hasScheme) return AppRoutes.splash;
+
       final auth = ref.read(authStateProvider).valueOrNull;
       final session = auth?.session;
       final loc = state.matchedLocation;

@@ -22,6 +22,14 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Links are handled by app_links (supabase recovery link and
+                 DeepLinkListener for shared spots); stop Flutter from also
+                 pushing them as routes into go_router. Must live on the
+                 activity, Flutter ignores it on <application>. -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -32,15 +40,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="io.supabase.spotforfun" />
             </intent-filter>
+            <!-- Shared spot links (https://<share host>/s/<id>), verified
+                 through the Worker's /.well-known/assetlinks.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="${shareHost}" />
+                <data android:pathPrefix="/s/" />
+            </intent-filter>
         </activity>
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Deep links are handled by supabase_flutter (app_links); stop
-             Flutter from also pushing them as routes into go_router. -->
-        <meta-data
-            android:name="flutter_deeplinking_enabled"
-            android:value="false" />
     </application>
     <queries>
         <intent>

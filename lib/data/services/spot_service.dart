@@ -1,5 +1,5 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:spot_for_fun/data/models/spot_dto.dart';
@@ -47,14 +47,19 @@ class SpotService {
   SpotService(this._client);
   final SupabaseClient _client;
 
-  Future<List<SpotDto>> fetchApproved({SpotFilter filter = const SpotFilter()}) async {
+  Future<List<SpotDto>> fetchApproved({
+    SpotFilter filter = const SpotFilter(),
+  }) async {
     var query = _client
         .from('spots')
         .select('*, $_authorSelect')
         .eq('status', 'approved');
 
     if (filter.types.isNotEmpty) {
-      query = query.inFilter('type', filter.types.map((e) => e.dbValue).toList());
+      query = query.inFilter(
+        'type',
+        filter.types.map((e) => e.dbValue).toList(),
+      );
     }
     if (filter.difficulties.isNotEmpty) {
       query = query.inFilter(
@@ -181,7 +186,9 @@ class SpotService {
     required Uint8List bytes,
   }) async {
     final path = '$userId/$spotId/$filename';
-    await _client.storage.from('spot-photos').uploadBinary(
+    await _client.storage
+        .from('spot-photos')
+        .uploadBinary(
           path,
           bytes,
           // 'image/jpg' isn't a real MIME type; the bucket only accepts
@@ -190,7 +197,41 @@ class SpotService {
             contentType: ext == 'jpg' ? 'image/jpeg' : 'image/$ext',
           ),
         );
+    await _uploadThumbnail(
+      userId: userId,
+      spotId: spotId,
+      filename: filename,
+      bytes: bytes,
+    );
     return _client.storage.from('spot-photos').getPublicUrl(path);
+  }
+
+  /// Best effort: a ~600 px JPEG next to the photo
+  /// (`thumb_<name>.jpg`). Share-link previews use it because WhatsApp
+  /// drops images much bigger than ~300 KB. A failure here never fails
+  /// the photo upload.
+  Future<void> _uploadThumbnail({
+    required String userId,
+    required String spotId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    try {
+      final thumb = await compute(_encodeThumbnail, bytes);
+      if (thumb == null) return;
+      final stem = filename.contains('.')
+          ? filename.substring(0, filename.lastIndexOf('.'))
+          : filename;
+      await _client.storage
+          .from('spot-photos')
+          .uploadBinary(
+            '$userId/$spotId/thumb_$stem.jpg',
+            thumb,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+    } catch (e) {
+      debugPrint('thumbnail upload skipped: $e');
+    }
   }
 
   Future<SpotPhotoDto> attachSpotPhoto({
@@ -263,7 +304,8 @@ class SpotService {
   }
 
   SpotDto _spotDtoFromRow(Map<String, dynamic> map) {
-    final photos = (map['spot_photos'] as List?)
+    final photos =
+        (map['spot_photos'] as List?)
             ?.cast<Map<String, dynamic>>()
             .map(SpotPhotoDto.fromMap)
             .toList() ??
@@ -315,4 +357,19 @@ class SpotService {
     if (url == null || url.isEmpty) return null;
     return url;
   }
+}
+
+/// Runs in a background isolate (compute): decode, shrink to 600 px wide,
+/// re-encode as JPEG. Null when the bytes aren't a decodable image.
+Uint8List? _encodeThumbnail(Uint8List bytes) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) return null;
+  final small = decoded.width > 600
+      ? img.copyResize(
+          decoded,
+          width: 600,
+          interpolation: img.Interpolation.average,
+        )
+      : decoded;
+  return img.encodeJpg(small, quality: 72);
 }

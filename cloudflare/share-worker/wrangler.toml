@@ -1,0 +1,23 @@
+# Shared spot links: https://<worker>/s/<spot-id>
+#  - serves a small page with Open Graph tags (title, description, photo)
+#    so WhatsApp / Telegram / Instagram show a preview;
+#  - serves /.well-known/assetlinks.json so Android opens those links
+#    directly in the app (App Links).
+# Deploy with ./deploy.sh (reads SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY
+# from the app's .env, so nothing environment-specific is committed).
+name = "spot4fun"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+ANDROID_PACKAGE = "com.spotforfun.app"
+# SHA-256 of every key that signs the app, comma separated. Today only the
+# debug keystore; add the upload key and Play App Signing key before release.
+ANDROID_SHA256 = "B2:3A:82:0F:AE:E8:D1:EF:CF:DD:43:F1:79:D4:E0:F3:99:04:E9:76:39:02:4C:20:BF:ED:75:33:A5:B3:85:5D"
+# Flip to "true" once the app is live on Google Play.
+PLAY_STORE_LIVE = "false"

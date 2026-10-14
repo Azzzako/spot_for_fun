@@ -32,6 +32,18 @@ class AppEnv {
     return dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
   }
 
+  /// Base of shared spot links, e.g. `https://spot4fun.<cuenta>.workers.dev`
+  /// (the Cloudflare Worker in cloudflare/share-worker). Empty hides the
+  /// share button.
+  static String get shareBaseUrl {
+    final fromEnv = const String.fromEnvironment(
+      'SHARE_BASE_URL',
+      defaultValue: '',
+    );
+    final raw = fromEnv.isNotEmpty ? fromEnv : dotenv.env['SHARE_BASE_URL'];
+    return (raw ?? '').trim().replaceAll(RegExp(r'/+$'), '');
+  }
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
 }
