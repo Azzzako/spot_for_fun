@@ -65,7 +65,11 @@ class ProfileService {
     await _client.storage.from('avatars').uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(contentType: 'image/$ext'),
+          // 'image/jpg' isn't a real MIME type; the bucket only accepts
+          // image/jpeg, image/png, image/webp (and gif for avatars).
+          fileOptions: FileOptions(
+            contentType: ext == 'jpg' ? 'image/jpeg' : 'image/$ext',
+          ),
         );
     final url = _client.storage.from('avatars').getPublicUrl(path);
     final res = await _client
