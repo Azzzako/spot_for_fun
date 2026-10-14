@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/add_spot_photo_view_model.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
 /// Bottom sheet that lets the spot author attach extra photos to a
 /// spot directly (without a review). Photos enter pending and need
@@ -58,24 +60,17 @@ class _AddSpotPhotoSheetState extends ConsumerState<AddSpotPhotoSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Agregar fotos al spot',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            Text('AGREGAR FOTOS', style: AppTheme.display(28)),
             const SizedBox(height: 4),
             Text(
-              widget.spot.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-              ),
+              widget.spot.name.toUpperCase(),
+              style: AppTheme.label(12, color: AppColors.boneMuted),
             ),
             const SizedBox(height: 8),
             Text(
               'Las fotos pasarán por revisión antes de mostrarse a la comunidad.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -94,7 +89,7 @@ class _AddSpotPhotoSheetState extends ConsumerState<AddSpotPhotoSheet> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(state.errorMessage!),
                 ),
@@ -110,10 +105,10 @@ class _AddSpotPhotoSheetState extends ConsumerState<AddSpotPhotoSheet> {
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.4,
-                          color: Colors.white,
+                          color: AppColors.asphalt,
                         ),
                       )
-                    : const Text('Enviar fotos'),
+                    : const Text('ENVIAR FOTOS'),
               ),
             ),
           ],

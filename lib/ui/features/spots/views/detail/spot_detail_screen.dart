@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
@@ -12,13 +12,18 @@ import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 import 'package:spot_for_fun/ui/features/social/view_models/social_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
 import 'package:spot_for_fun/ui/features/spots/views/detail/spot_photo_viewer_screen.dart';
 import 'package:spot_for_fun/ui/features/spots/widgets/add_spot_photo_sheet.dart';
 import 'package:spot_for_fun/ui/features/spots/widgets/write_rating_sheet.dart';
-import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
-import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_photo_placeholder.dart';
+import 'package:spot_for_fun/ui/shared/widgets/staggered_entrance.dart';
+import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
+import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
 import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 final spotByIdProvider =
@@ -50,8 +55,7 @@ class SpotDetailScreen extends ConsumerWidget {
     final asyncSpot = ref.watch(spotByIdProvider(spotId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      // Like / favorite invalidate the providers this depends on; keep
+      // Favorite toggles invalidate the providers this depends on; keep
       // showing the current spot while it reloads instead of a spinner.
       body: asyncSpot.when(
         skipLoadingOnReload: true,
@@ -62,13 +66,14 @@ class SpotDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline, size: 48),
-                const SizedBox(height: 8),
-                const Text('No se pudo cargar el spot.'),
-                const SizedBox(height: 16),
+                const Icon(Icons.error_outline,
+                    size: 44, color: AppColors.danger),
+                const SizedBox(height: 12),
+                Text('NO SE PUDO CARGAR', style: AppTheme.display(26)),
+                const SizedBox(height: 20),
                 FilledButton(
                   onPressed: () => ref.invalidate(spotByIdProvider(spotId)),
-                  child: const Text('Reintentar'),
+                  child: const Text('REINTENTAR'),
                 ),
               ],
             ),
@@ -87,259 +92,332 @@ class _DetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final canSeePrivate = spot.status != SpotStatus.approved;
     // Photos are fetched separately so Supabase applies the
     // spot_photos RLS (the embedded select in fetchById doesn't).
     final photosAsync = ref.watch(spotPhotosVisibleProvider(spot.id));
     final photos = photosAsync.valueOrNull ?? const <SpotPhoto>[];
+    final isOwner = ref.watch(currentUserIdProvider) == spot.authorId;
+    final hasSafety =
+        spot.safetyNotes != null && spot.safetyNotes!.trim().isNotEmpty;
+    final hasReject =
+        spot.rejectReason != null && spot.rejectReason!.trim().isNotEmpty;
 
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 280,
+          expandedHeight: 400,
           pinned: true,
-          backgroundColor: theme.colorScheme.surface,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.asphalt,
+          automaticallyImplyLeading: false,
           leading: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Material(
-              color: Colors.black.withValues(alpha: 0.45),
-              shape: const CircleBorder(),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
+            padding: const EdgeInsets.all(6),
+            child: _HeroButton(
+              tooltip: 'Volver',
+              icon: Icons.arrow_back,
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ),
           actions: [
-            if (canSeePrivate)
+            if (isOwner)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Chip(
-                  label: Text(spot.status.label),
-                  backgroundColor: spot.status == SpotStatus.rejected
-                      ? theme.colorScheme.errorContainer
-                      : theme.colorScheme.tertiaryContainer,
+                padding: const EdgeInsets.all(6),
+                child: _HeroButton(
+                  tooltip: 'Agregar fotos',
+                  icon: Icons.add_a_photo_outlined,
+                  onPressed: () async {
+                    final ok = await AddSpotPhotoSheet.show(context, spot);
+                    if (ok == true && context.mounted) {
+                      ref.invalidate(spotByIdProvider(spot.id));
+                      ref.invalidate(spotPhotosVisibleProvider(spot.id));
+                    }
+                  },
                 ),
               ),
-            if (_isOwner(ref, spot))
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Material(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  shape: const CircleBorder(),
-                  child: IconButton(
-                    tooltip: 'Agregar fotos',
-                    icon: const Icon(Icons.add_a_photo_outlined,
-                        color: Colors.white),
-                    onPressed: () async {
-                      final ok = await AddSpotPhotoSheet.show(context, spot);
-                      if (ok == true && context.mounted) {
-                        ref.invalidate(spotByIdProvider(spot.id));
-                      }
-                    },
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Material(
-                color: Colors.black.withValues(alpha: 0.45),
-                shape: const CircleBorder(),
-                child: IconButton(
-                  icon: const Icon(Icons.ios_share_rounded,
-                      color: Colors.white),
-                  onPressed: () => _stubAction(context, 'Compartir'),
-                ),
-              ),
-            ),
+            const SizedBox(width: 6),
           ],
           flexibleSpace: FlexibleSpaceBar(
-            background: _PhotoGallery(photos: photos, spotId: spot.id),
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            collapseMode: CollapseMode.parallax,
+            background: Stack(
+              fit: StackFit.expand,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    spotMarkerPin(
-                      kind: resolveSpotKind(spot),
-                      brightness: theme.brightness,
-                      photoUrl: spot.photos.isNotEmpty
-                          ? spot.photos.first.url
-                          : null,
-                      size: 40,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            spot.name.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              textStyle:
-                                  theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ),
-                          if (spot.authorDisplayName != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              'Por @${spot.authorDisplayName}',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Text(
-                                spot.type.label,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.65),
-                                ),
-                              ),
-                              Text(
-                                '  ·  ',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.4),
-                                ),
-                              ),
-                              Flexible(
-                                child: Text(
-                                  'Ciudad de México',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.65),
-                                  ),
-                                ),
-                              ),
-                            ],
+                _PhotoGallery(photos: photos, spotId: spot.id),
+                Positioned(
+                  left: 20,
+                  bottom: 18,
+                  child: IgnorePointer(
+                    child: Row(
+                      children: [
+                        TapeLabel(spot.type.label, angleDegrees: -3),
+                        const SizedBox(width: 8),
+                        TapeLabel(
+                          spot.difficulty.label,
+                          color: AppColors.bone,
+                          angleDegrees: 2,
+                        ),
+                        if (spot.status != SpotStatus.approved) ...[
+                          const SizedBox(width: 8),
+                          TapeLabel(
+                            spot.status.label,
+                            color: spot.status == SpotStatus.rejected
+                                ? AppColors.danger
+                                : AppColors.boneMuted,
+                            angleDegrees: -1.5,
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                    _FavoriteButton(spot: spot),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 20),
-                _StatsRow(spot: spot),
-                const SizedBox(height: 18),
-                _ActionRow(spot: spot),
-                const SizedBox(height: 18),
-                _RatingCta(spot: spot),
               ],
             ),
           ),
         ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           sliver: SliverList(
-            delegate: SliverChildListDelegate.fixed([
-              _RatingsSection(spotId: spot.id),
-              if (spot.description.isNotEmpty) ...[
-                Text('Descripción', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 6),
-                Text(spot.description),
-                const SizedBox(height: 20),
-              ],
-              if (spot.bestTime.isNotEmpty) ...[
-                Text('Mejor horario', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: spot.bestTime
-                      .map((t) => _ChipText(label: t.label))
-                      .toList(),
+            delegate: SliverChildListDelegate.fixed(
+              [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        spot.name.toUpperCase(),
+                        style: theme.textTheme.displayMedium,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _FavoriteButton(spot: spot),
+                  ],
                 ),
-                const SizedBox(height: 20),
-              ],
-              if (spot.safetyNotes != null && spot.safetyNotes!.isNotEmpty) ...[
-                Text('Notas de seguridad',
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.errorContainer
-                        .withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
+                if (spot.authorDisplayName != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'POR @${spot.authorDisplayName!.toUpperCase()}',
+                    style: AppTheme.label(12, color: AppColors.boneMuted),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.warning_amber_rounded,
-                          color: theme.colorScheme.error, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(spot.safetyNotes!)),
-                    ],
-                  ),
+                ],
+                const SizedBox(height: 18),
+                _StatsRow(spot: spot),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: () => _openDirections(context, spot),
+                  icon: const Icon(Icons.navigation_outlined),
+                  label: const Text('CÓMO LLEGAR'),
                 ),
-                const SizedBox(height: 20),
-              ],
-              if (spot.rejectReason != null &&
-                  spot.rejectReason!.isNotEmpty) ...[
-                Text('Motivo de rechazo',
-                    style: theme.textTheme.titleSmall),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 10),
+                _RatingCta(spot: spot),
+                if (spot.description.trim().isNotEmpty)
+                  _Section(
+                    title: 'La línea',
+                    child: Text(
+                      spot.description.trim(),
+                      style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                    ),
                   ),
-                  child: Text(spot.rejectReason!),
+                if (spot.bestTime.isNotEmpty)
+                  _Section(
+                    title: 'Mejor hora',
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final t in spot.bestTime)
+                          _StaticTag(label: t.label),
+                      ],
+                    ),
+                  ),
+                if (hasSafety)
+                  _Section(
+                    title: 'Seguridad',
+                    child: _Notice(
+                      icon: Icons.warning_amber_rounded,
+                      color: AppColors.tape,
+                      text: spot.safetyNotes!.trim(),
+                    ),
+                  ),
+                if (hasReject)
+                  _Section(
+                    title: 'Motivo de rechazo',
+                    child: _Notice(
+                      icon: Icons.block,
+                      color: AppColors.danger,
+                      text: spot.rejectReason!.trim(),
+                    ),
+                  ),
+                _Section(
+                  title: 'Reseñas',
+                  child: _RatingsSection(spotId: spot.id),
                 ),
-                const SizedBox(height: 20),
-              ],
-              _MetaRow(spot: spot),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () => _openReportModal(context, ref),
-                icon: const Icon(Icons.flag_outlined),
-                label: const Text('Reportar spot'),
-              ),
-            ]),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Text(
+                      'DESDE ${DateFormat('d MMM y', 'es').format(spot.createdAt).toUpperCase()}',
+                      style: AppTheme.label(11, color: AppColors.boneMuted),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _openReportModal(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.boneMuted,
+                      ),
+                      icon: const Icon(Icons.flag_outlined, size: 18),
+                      label: const Text('Reportar spot'),
+                    ),
+                  ],
+                ),
+              ].staggeredEntrance(context, delay: Duration.zero),
+            ),
           ),
         ),
       ],
     );
   }
 
-  void _stubAction(BuildContext context, String label) {
-    ScaffoldMessenger.of(context)
+  Future<void> _openDirections(BuildContext context, Spot spot) async {
+    final lat = spot.lat.toStringAsFixed(6);
+    final lng = spot.lng.toStringAsFixed(6);
+    final encodedName = Uri.encodeComponent(spot.name);
+    final geo = Uri.parse('geo:$lat,$lng?q=$lat,$lng($encodedName)');
+    final web = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    if (await canLaunchUrl(geo)) {
+      await launchUrl(geo, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (await canLaunchUrl(web)) {
+      await launchUrl(web, mode: LaunchMode.externalApplication);
+      return;
+    }
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text('$label · próximamente')),
+        const SnackBar(content: Text('No se pudo abrir el mapa.')),
       );
   }
 
-  bool _isOwner(WidgetRef ref, Spot spot) {
-    final uid = ref.read(currentUserIdProvider);
-    return uid != null && uid == spot.authorId;
-  }
-
-  void _openReportModal(BuildContext context, WidgetRef ref) {
+  void _openReportModal(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => _ReportSheet(spotId: spot.id, parentContext: context),
+    );
+  }
+}
+
+class _HeroButton extends StatelessWidget {
+  const _HeroButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.asphalt,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: AppColors.lineStrong, width: 1.5),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(4),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(icon, color: AppColors.bone, size: 22),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.only(top: 16),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.line)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: AppTheme.label(12, color: AppColors.boneMuted),
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _StaticTag extends StatelessWidget {
+  const _StaticTag({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: AppColors.lineStrong, width: 1.5),
+      ),
+      child: Text(label.toUpperCase(), style: AppTheme.label(12)),
+    );
+  }
+}
+
+class _Notice extends StatelessWidget {
+  const _Notice({required this.icon, required this.color, required this.text});
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.concrete,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -393,29 +471,26 @@ class _ReportSheetState extends State<_ReportSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Reportar este spot',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
+          Text('REPORTAR SPOT', style: AppTheme.display(28)),
+          const SizedBox(height: 6),
           Text(
             'Elige un motivo. Opcionalmente añade detalles.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 16),
           Wrap(
-            spacing: 8,
+            spacing: 6,
             runSpacing: 8,
-            children: _reportCategories.map((c) {
-              final isSel = c == _selected;
-              return ChoiceChip(
-                label: Text(c.label),
-                selected: isSel,
-                onSelected: (_) => setState(() => _selected = c),
-              );
-            }).toList(),
+            children: [
+              for (final c in _reportCategories)
+                UrbanChip(
+                  label: c.label,
+                  selected: c == _selected,
+                  onTap: () => setState(() => _selected = c),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           TextField(
@@ -437,7 +512,7 @@ class _ReportSheetState extends State<_ReportSheet> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _selected == null || _sending ? null : _submit,
-            child: Text(_sending ? 'Enviando…' : 'Enviar reporte'),
+            child: Text(_sending ? 'ENVIANDO…' : 'ENVIAR REPORTE'),
           ),
           const SizedBox(height: 24),
         ],
@@ -474,202 +549,100 @@ class _ReportSheetState extends State<_ReportSheet> {
   }
 }
 
-class _StatsRow extends StatelessWidget {
+/// RATING · RESEÑAS · DISTANCIA (or the first best time when the user's
+/// position is unknown).
+class _StatsRow extends ConsumerWidget {
   const _StatsRow({required this.spot});
   final Spot spot;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final fmt = NumberFormat('0.0');
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _StatColumn(
-              value: spot.ratingsCount == 0
-                  ? '—'
-                  : fmt.format(spot.avgRating),
-              label: 'Calificación',
-              icon: Icons.star_rounded,
-              iconColor: const Color(0xFFFBBF24),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final map = ref.watch(mapViewModelProvider);
+    final from = map.hasRealLocation ? map.currentLocation : null;
+
+    final String thirdValue;
+    final String thirdLabel;
+    if (from != null) {
+      final meters = const Distance().as(
+        LengthUnit.Meter,
+        from,
+        LatLng(spot.lat, spot.lng),
+      );
+      thirdValue = meters < 1000
+          ? '${meters.round()} M'
+          : '${(meters / 1000).toStringAsFixed(1)} KM';
+      thirdLabel = 'Distancia';
+    } else if (spot.bestTime.isNotEmpty) {
+      thirdValue = spot.bestTime.first.label.toUpperCase();
+      thirdLabel = 'Mejor hora';
+    } else {
+      thirdValue = '—';
+      thirdLabel = 'Distancia';
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _StatBox(
+            value: spot.ratingsCount == 0
+                ? '—'
+                : NumberFormat('0.0').format(spot.avgRating),
+            label: 'Rating',
+            highlight: spot.ratingsCount > 0,
           ),
-          _Divider(),
-          Expanded(
-            child: _StatColumn(
-              value: spot.ratingsCount.toString(),
-              label: 'Reseñas',
-              icon: Icons.rate_review_rounded,
-            ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _StatBox(
+            value: spot.ratingsCount.toString(),
+            label: 'Reseñas',
           ),
-          _Divider(),
-          Expanded(
-            child: _StatColumn(
-              value: '1.2 km',
-              label: 'Distancia',
-              icon: Icons.place_rounded,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: _StatBox(value: thirdValue, label: thirdLabel)),
+      ],
     );
   }
 }
 
-class _StatColumn extends StatelessWidget {
-  const _StatColumn({
+class _StatBox extends StatelessWidget {
+  const _StatBox({
     required this.value,
     required this.label,
-    required this.icon,
-    this.iconColor,
+    this.highlight = false,
   });
 
   final String value;
   final String label;
-  final IconData icon;
-  final Color? iconColor;
+  final bool highlight;
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 20, color: iconColor ?? theme.colorScheme.onSurface),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1,
-      height: 36,
-      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
-    );
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({required this.spot});
-  final Spot spot;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionButton(
-            icon: Icons.directions_rounded,
-            label: 'Cómo llegar',
-            onTap: () => _openDirections(context, spot),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _ActionButton(
-            icon: Icons.ios_share_rounded,
-            label: 'Compartir',
-            onTap: () => _stub(context, 'Compartir'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _stub(BuildContext context, String label) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('$label · próximamente')),
-      );
-  }
-
-  Future<void> _openDirections(BuildContext context, Spot spot) async {
-    final lat = spot.lat.toStringAsFixed(6);
-    final lng = spot.lng.toStringAsFixed(6);
-    final encodedName = Uri.encodeComponent(spot.name);
-    final geo = Uri.parse(
-      'geo:$lat,$lng?q=$lat,$lng($encodedName)',
-    );
-    final web = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-    );
-    final messenger = ScaffoldMessenger.of(context);
-    if (await canLaunchUrl(geo)) {
-      await launchUrl(geo, mode: LaunchMode.externalApplication);
-      return;
-    }
-    if (await canLaunchUrl(web)) {
-      await launchUrl(web, mode: LaunchMode.externalApplication);
-      return;
-    }
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir el mapa.')),
-      );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surfaceContainer,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.line, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: AppTheme.display(
+                28,
+                color: highlight ? AppColors.tape : AppColors.bone,
               ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            label.toUpperCase(),
+            style: AppTheme.label(10, color: AppColors.boneMuted),
+          ),
+        ],
       ),
     );
   }
@@ -681,20 +654,33 @@ class _FavoriteButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final saved = spot.isFavorited;
-    return IconButton(
-      tooltip: saved ? 'Quitar de favoritos' : 'Guardar en favoritos',
-      onPressed: () => _reportSocialResult(
-        ScaffoldMessenger.of(context),
-        ref.read(socialViewModelProvider.notifier).toggleFavorite(
-              spotId: spot.id,
-              currentlyFavorited: saved,
+    return Tooltip(
+      message: saved ? 'Quitar de favoritos' : 'Guardar en favoritos',
+      child: Material(
+        color: saved ? AppColors.tape : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: AppColors.tape, width: 1.5),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: () => _reportSocialResult(
+            ScaffoldMessenger.of(context),
+            ref.read(socialViewModelProvider.notifier).toggleFavorite(
+                  spotId: spot.id,
+                  currentlyFavorited: saved,
+                ),
+          ),
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: Icon(
+              saved ? Icons.bookmark : Icons.bookmark_border,
+              color: saved ? AppColors.asphalt : AppColors.tape,
             ),
-      ),
-      icon: Icon(
-        saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-        color: saved ? theme.colorScheme.primary : null,
+          ),
+        ),
       ),
     );
   }
@@ -714,92 +700,88 @@ Future<void> _reportSocialResult(
     );
 }
 
-class _PhotoGallery extends StatelessWidget {
+class _PhotoGallery extends StatefulWidget {
   const _PhotoGallery({required this.photos, required this.spotId});
   final List<SpotPhoto> photos;
   final String spotId;
 
+  static String heroTag(String spotId, int index) =>
+      'spot-photo-$spotId-$index';
+
+  @override
+  State<_PhotoGallery> createState() => _PhotoGalleryState();
+}
+
+class _PhotoGalleryState extends State<_PhotoGallery> {
+  int _page = 0;
+
   @override
   Widget build(BuildContext context) {
-    if (photos.isEmpty) {
-      return GestureDetector(
-        onTap: () => _openFullscreen(context, 0),
-        child: Hero(
-          tag: _heroTag(spotId, 0),
-          child: Image.asset(
-            defaultSpotImageFor(spotId),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Center(
-                child: Icon(
-                  Icons.image_not_supported_outlined,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+    final photos = widget.photos;
+    if (photos.isEmpty) return const SpotPhotoPlaceholder();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          itemCount: photos.length,
+          onPageChanged: (i) => setState(() => _page = i),
+          itemBuilder: (_, i) {
+            final photo = photos[i];
+            return GestureDetector(
+              onTap: () => _openFullscreen(context, i),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Hero(
+                    tag: _PhotoGallery.heroTag(widget.spotId, i),
+                    child: CachedNetworkImage(
+                      imageUrl: photo.url,
+                      fit: BoxFit.cover,
+                      placeholder: (_, _) =>
+                          const ColoredBox(color: AppColors.concreteHigh),
+                      errorWidget: (_, _, _) => const SpotPhotoPlaceholder(),
+                    ),
+                  ),
+                  if (photo.photoStatus == PhotoStatus.pending)
+                    const Positioned(
+                      right: 16,
+                      bottom: 18,
+                      child: TapeLabel(
+                        'En revisión',
+                        color: AppColors.bone,
+                        angleDegrees: 2,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+        if (photos.length > 1)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 60,
+            child: IgnorePointer(
+              child: Row(
+                children: [
+                  for (var i = 0; i < photos.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 4),
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        height: 3,
+                        color: i == _page
+                            ? AppColors.tape
+                            : AppColors.bone.withValues(alpha: 0.35),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-        ),
-      );
-    }
-    return PageView.builder(
-      itemCount: photos.length,
-      itemBuilder: (_, i) {
-        final photo = photos[i];
-        final pending = photo.photoStatus == PhotoStatus.pending;
-        return GestureDetector(
-          onTap: () => _openFullscreen(context, i),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Hero(
-                tag: _heroTag(spotId, i),
-                child: CachedNetworkImage(
-                  imageUrl: photo.url,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(color: Colors.black12),
-                  errorWidget: (_, _, _) => Image.asset(
-                    defaultSpotImageFor('$spotId,$i'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              if (pending)
-                Positioned(
-                  left: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.hourglass_top,
-                            size: 14, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          'En revisión',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
+      ],
     );
   }
 
@@ -812,54 +794,13 @@ class _PhotoGallery extends StatelessWidget {
         transitionDuration: const Duration(milliseconds: 320),
         reverseTransitionDuration: const Duration(milliseconds: 280),
         pageBuilder: (_, _, _) => SpotPhotoViewerScreen(
-          photos: photos,
+          photos: widget.photos,
           initialIndex: index,
-          spotId: spotId,
+          spotId: widget.spotId,
         ),
         transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ),
-    );
-  }
-
-  static String _heroTag(String spotId, int index) =>
-      'spot-photo-$spotId-$index';
-}
-
-class _ChipText extends StatelessWidget {
-  const _ChipText({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(label, style: Theme.of(context).textTheme.labelMedium),
-    );
-  }
-}
-
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.spot});
-  final Spot spot;
-
-  @override
-  Widget build(BuildContext context) {
-    final created = DateFormat.yMMMd().format(spot.createdAt);
-    return Row(
-      children: [
-        Icon(Icons.access_time,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text('Creado $created',
-            style: Theme.of(context).textTheme.bodySmall),
-      ],
     );
   }
 }
@@ -884,7 +825,6 @@ class _RatingCtaState extends ConsumerState<_RatingCta> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final spot = widget.spot;
     final uid = ref.watch(currentUserIdProvider);
     if (uid == null) return const SizedBox.shrink();
@@ -907,25 +847,11 @@ class _RatingCtaState extends ConsumerState<_RatingCta> {
         height: 52,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line, width: 1.5),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.edit_note_outlined,
-              size: 20,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Eres el autor de este spot',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
+        child: Text(
+          'ERES EL AUTOR DE ESTE SPOT',
+          style: AppTheme.label(12, color: AppColors.boneMuted),
         ),
       );
     }
@@ -936,39 +862,33 @@ class _RatingCtaState extends ConsumerState<_RatingCta> {
     final String label;
     final IconData icon;
     if (locked) {
-      label = 'Reseña publicada';
+      label = 'RESEÑA PUBLICADA';
       icon = Icons.check_circle_outline;
     } else if (hasReview) {
-      label = 'Editar tu reseña';
+      label = 'EDITAR TU RESEÑA';
       icon = Icons.edit_outlined;
     } else {
-      label = 'Dejar reseña';
+      label = 'DEJAR RESEÑA';
       icon = Icons.rate_review_outlined;
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: () async {
-              final ok = await WriteRatingSheet.show(context, spot);
-              if (ok == true) {
-                ref.invalidate(visibleRatingsProvider(spot.id));
-              }
-            },
-            icon: Icon(icon),
-            label: Text(label),
-            style: FilledButton.styleFrom(
-              backgroundColor: locked
-                  ? theme.colorScheme.surfaceContainerHigh
-                  : null,
-              foregroundColor: locked
-                  ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                  : null,
-            ),
-          ),
+        OutlinedButton.icon(
+          onPressed: () async {
+            final ok = await WriteRatingSheet.show(context, spot);
+            if (ok == true) {
+              ref.invalidate(visibleRatingsProvider(spot.id));
+            }
+          },
+          icon: Icon(icon),
+          label: Text(label),
+          style: locked
+              ? OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.boneMuted,
+                )
+              : null,
         ),
         const SizedBox(height: 6),
         _ProximityHint(state: state),
@@ -1005,21 +925,19 @@ class _ProximityHint extends StatelessWidget {
       case RatingLocationStatus.granted:
         final d = state.distanceMeters;
         if (d == null) return const SizedBox.shrink();
+        final meters = d.round();
         if (state.isNearEnough) {
-          final meters = d.round();
           text = 'Estás a $meters m del spot · listo para reseñar.';
+          color = AppColors.moss;
         } else {
-          final meters = d.round();
           text =
               'Estás a $meters m. Acércate a menos de ${kRatingMaxDistanceMeters.toInt()} m para dejar reseña.';
+          color = theme.colorScheme.onSurfaceVariant;
         }
-        color = state.isNearEnough
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurface.withValues(alpha: 0.7);
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Text(
         text,
         style: theme.textTheme.bodySmall?.copyWith(color: color),
@@ -1045,27 +963,21 @@ class _RatingsSection extends ConsumerWidget {
       );
     }
     if (visible.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          'Aún no hay reseñas. ¡Sé el primero en dejar una!',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
+      return Text(
+        'Aún no hay reseñas. ¡Sé el primero en dejar una!',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       );
     }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Reseñas (${visible.length})',
-            style: theme.textTheme.titleSmall),
-        const SizedBox(height: 12),
-        ...visible.map((r) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _RatingCard(rating: r),
-            )),
-        const SizedBox(height: 8),
+        for (final r in visible)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _RatingCard(rating: r),
+          ),
       ],
     );
   }
@@ -1080,16 +992,13 @@ class _RatingCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isPending = rating.status == ReviewStatus.pending;
     final isRejected = rating.status == ReviewStatus.rejected;
-    final accent = isPending
-        ? theme.colorScheme.tertiaryContainer
-        : isRejected
-            ? theme.colorScheme.errorContainer
-            : null;
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: accent != null ? Border.all(color: accent) : null,
+        color: AppColors.concrete,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isRejected ? AppColors.danger : AppColors.line,
+        ),
       ),
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -1109,19 +1018,20 @@ class _RatingCard extends StatelessWidget {
                   children: [
                     Text(
                       '@${rating.authorDisplayName}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: theme.textTheme.titleSmall,
                     ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         _Stars(value: rating.rating),
                         const SizedBox(width: 8),
                         Text(
-                          DateFormat.yMMMd().format(rating.createdAt),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.55),
+                          DateFormat('d MMM y', 'es')
+                              .format(rating.createdAt)
+                              .toUpperCase(),
+                          style: AppTheme.label(
+                            10,
+                            color: AppColors.boneMuted,
                           ),
                         ),
                       ],
@@ -1130,25 +1040,20 @@ class _RatingCard extends StatelessWidget {
                 ),
               ),
               if (isPending || isRejected)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    rating.status.label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                TapeLabel(
+                  rating.status.label,
+                  fontSize: 10,
+                  color: isRejected ? AppColors.danger : AppColors.bone,
+                  angleDegrees: 2,
                 ),
             ],
           ),
           if (rating.comment != null && rating.comment!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(rating.comment!.trim()),
+            Text(
+              rating.comment!.trim(),
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+            ),
           ],
         ],
       ),
@@ -1164,19 +1069,14 @@ class _Stars extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (i) {
-        final filled = i < value;
-        return Icon(
-          filled ? Icons.star_rounded : Icons.star_border_rounded,
-          size: 16,
-          color: filled
-              ? const Color(0xFFFBBF24)
-              : Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.3),
-        );
-      }),
+      children: [
+        for (var i = 0; i < 5; i++)
+          Icon(
+            i < value ? Icons.star : Icons.star_border,
+            size: 15,
+            color: i < value ? AppColors.tape : AppColors.lineStrong,
+          ),
+      ],
     );
   }
 }

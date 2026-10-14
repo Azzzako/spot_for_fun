@@ -45,6 +45,5 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/sample_spots/
     - assets/identity/
     - .env

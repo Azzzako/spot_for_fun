@@ -6,7 +6,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_photo_placeholder.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
 
 class SpotPhotoViewerScreen extends StatefulWidget {
   const SpotPhotoViewerScreen({
@@ -207,10 +210,7 @@ class _PhotoPage extends StatelessWidget {
       placeholder: (_, _) => const Center(
         child: CircularProgressIndicator(strokeWidth: 2.4),
       ),
-      errorWidget: (_, _, _) => Image.asset(
-        defaultSpotImageFor('$spotId,$index'),
-        fit: BoxFit.contain,
-      ),
+      errorWidget: (_, _, _) => const SpotPhotoPlaceholder(),
     );
 
     final heroWrapped = heroTag != null
@@ -260,15 +260,19 @@ class _HeaderButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
-      child: ClipOval(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Material(
-            color: scheme.surface.withValues(alpha: 0.55),
-            shape: const CircleBorder(),
+            color: scheme.surface.withValues(alpha: 0.7),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+              side: BorderSide(color: scheme.outline, width: 1.5),
+            ),
             child: InkWell(
               onTap: onTap,
-              customBorder: const CircleBorder(),
+              borderRadius: BorderRadius.circular(4),
               child: SizedBox(
                 width: 44,
                 height: 44,
@@ -290,29 +294,12 @@ class _Counter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Text(
-            '$current / $total',
-            style: TextStyle(
-              color: scheme.onSurface,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: scheme.surface.withValues(alpha: 0.8),
+      child: Text(
+        '$current / $total',
+        style: AppTheme.label(12),
       ),
     );
   }
@@ -362,29 +349,6 @@ class _PendingBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.hourglass_top, size: 14, color: scheme.onTertiaryContainer),
-          const SizedBox(width: 6),
-          Text(
-            'En revisión',
-            style: TextStyle(
-              color: scheme.onTertiaryContainer,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const TapeLabel('En revisión', color: AppColors.bone);
   }
 }

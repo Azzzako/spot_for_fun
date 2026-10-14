@@ -7,6 +7,8 @@ import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/domain/models/spot_rating.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/write_rating_view_model.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
 /// Bottom sheet that creates or edits the current user's [SpotRating]
 /// for the given [spot]. Validations: rating 1-5, comment 5-500 chars,
@@ -102,17 +104,13 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              state.isEditing ? 'Editar reseña' : 'Dejar reseña',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              state.isEditing ? 'EDITAR RESEÑA' : 'DEJAR RESEÑA',
+              style: AppTheme.display(28),
             ),
             const SizedBox(height: 4),
             Text(
-              widget.spot.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-              ),
+              widget.spot.name.toUpperCase(),
+              style: AppTheme.label(12, color: AppColors.boneMuted),
             ),
             const SizedBox(height: 20),
             if (state.isOwnSpot)
@@ -125,9 +123,8 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
                     'Esta reseña ya fue aprobada y no puede editarse de nuevo.',
               )
             else ...[
-              Text('Tu calificación',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+              Text('TU CALIFICACIÓN',
+                  style: AppTheme.label(12, color: AppColors.boneMuted)),
               const SizedBox(height: 10),
               _StarPicker(
                 value: state.rating,
@@ -136,9 +133,8 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
                     .setRating(v),
               ),
               const SizedBox(height: 18),
-              Text('Comentario',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+              Text('COMENTARIO',
+                  style: AppTheme.label(12, color: AppColors.boneMuted)),
               const SizedBox(height: 8),
               TextField(
                 controller: _commentCtrl,
@@ -168,9 +164,8 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
                 ),
               const SizedBox(height: 18),
               Text(
-                'Fotos (máx $kRatingMaxPhotos)',
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                'FOTOS (MÁX $kRatingMaxPhotos)',
+                style: AppTheme.label(12, color: AppColors.boneMuted),
               ),
               const SizedBox(height: 8),
               if (state.existingPhotos.isNotEmpty) ...[
@@ -218,10 +213,10 @@ class _WriteRatingSheetState extends ConsumerState<WriteRatingSheet> {
                         width: 22,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.4,
-                          color: Colors.white,
+                          color: AppColors.asphalt,
                         ),
                       )
-                    : Text(state.isEditing ? 'Guardar cambios' : 'Enviar reseña'),
+                    : Text(state.isEditing ? 'GUARDAR CAMBIOS' : 'ENVIAR RESEÑA'),
               ),
             ),
           ],
@@ -238,7 +233,6 @@ class _StarPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(5, (i) {
@@ -252,11 +246,9 @@ class _StarPicker extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(4),
               child: Icon(
-                filled ? Icons.star_rounded : Icons.star_border_rounded,
+                filled ? Icons.star : Icons.star_border,
                 size: 40,
-                color: filled
-                    ? const Color(0xFFFBBF24)
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                color: filled ? AppColors.tape : AppColors.lineStrong,
               ),
             ),
           ),
@@ -280,7 +272,7 @@ class _Banner extends StatelessWidget {
         color: error
             ? theme.colorScheme.errorContainer
             : theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(text),
     );

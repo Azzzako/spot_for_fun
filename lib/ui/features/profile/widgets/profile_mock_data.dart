@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/ui/shared/constants/default_spot_images.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_photo_placeholder.dart';
 import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
 class SpotListCard extends StatelessWidget {
@@ -41,18 +41,7 @@ class SpotListCard extends StatelessWidget {
 
     final fallback = ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Image.asset(
-        defaultSpotImageFor(spot.id),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          color: theme.colorScheme.surfaceContainerHigh,
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.image_not_supported_outlined,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
-        ),
-      ),
+      child: const SpotPhotoPlaceholder(compact: true),
     );
 
     final hasActions =
