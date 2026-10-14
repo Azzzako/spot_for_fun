@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,18 +14,19 @@ class SettingsScreen extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar sesión'),
+        title: const Text('CERRAR SESIÓN'),
         content: const Text(
           'Tendrás que volver a iniciar sesión para usar la app.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
+            child: const Text('CANCELAR'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cerrar sesión'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('CERRAR SESIÓN'),
           ),
         ],
       ),
@@ -36,16 +39,10 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: theme.colorScheme.surface,
-        title: const Text('Configuración'),
-      ),
+      appBar: AppBar(title: const Text('AJUSTES')),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 32),
         children: [
           const _SectionLabel('Cuenta'),
           _NavTile(
@@ -58,39 +55,25 @@ class SettingsScreen extends ConsumerWidget {
             label: 'Privacidad',
             onTap: () => context.push(AppRoutes.settingsPrivacy),
           ),
-          _NavTile(
-            icon: Icons.notifications_none_outlined,
-            label: 'Notificaciones',
-            onTap: () => context.push(AppRoutes.settingsNotifications),
-          ),
-          const _SectionLabel('Preferencias'),
-          const _ReadOnlyTile(
-            icon: Icons.straighten_outlined,
-            label: 'Unidades',
-            value: 'km',
-          ),
-          const _ReadOnlyTile(
-            icon: Icons.language_outlined,
-            label: 'Idioma',
-            value: 'Español',
-          ),
-          const _SectionLabel('Soporte'),
-          _NavTile(
-            icon: Icons.help_outline,
-            label: 'Ayuda',
-            onTap: () => context.push(AppRoutes.settingsHelp),
-          ),
+          const _SectionLabel('App'),
           _NavTile(
             icon: Icons.info_outline,
-            label: 'Acerca de',
+            label: 'Acerca de Spot4Fun',
             onTap: () => context.push(AppRoutes.settingsAbout),
           ),
-          const SizedBox(height: 8),
-          const _Divider(),
-          _LogoutTile(
-            onTap: () => _confirmLogout(context, ref),
+          const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: OutlinedButton.icon(
+              onPressed: () => _confirmLogout(context, ref),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.danger,
+                side: const BorderSide(color: AppColors.danger, width: 1.5),
+              ),
+              icon: const Icon(Icons.logout),
+              label: const Text('CERRAR SESIÓN'),
+            ),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );
@@ -103,15 +86,11 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Text(
-        text,
-        style: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-        ),
+        text.toUpperCase(),
+        style: AppTheme.label(12, color: AppColors.boneMuted),
       ),
     );
   }
@@ -130,77 +109,16 @@ class _NavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
-    );
-  }
-}
-
-class _ReadOnlyTile extends StatelessWidget {
-  const _ReadOnlyTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(label),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right),
-        ],
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
-      onTap: () {},
-    );
-  }
-}
-
-class _LogoutTile extends StatelessWidget {
-  const _LogoutTile({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.logout, color: Colors.redAccent),
-      title: const Text(
-        'Cerrar sesión',
-        style: TextStyle(color: Colors.redAccent),
-      ),
-      onTap: onTap,
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Divider(
-        color: Theme.of(context).colorScheme.outline,
-        height: 1,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        leading: Icon(icon, color: AppColors.boneMuted),
+        title: Text(label),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.boneMuted),
+        onTap: onTap,
       ),
     );
   }

@@ -12,6 +12,7 @@ import 'package:spot_for_fun/ui/features/auth/views/reset_password_screen.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/edit_profile_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
+import 'package:spot_for_fun/ui/features/settings/views/about_screen.dart';
 import 'package:spot_for_fun/ui/features/settings/views/coming_soon_screen.dart';
 import 'package:spot_for_fun/ui/features/settings/views/settings_screen.dart';
 import 'package:spot_for_fun/ui/features/shell/views/app_shell.dart';
@@ -39,8 +40,6 @@ class AppRoutes {
   static const settings = '/settings';
   static const settingsEditProfile = '/settings/edit-profile';
   static const settingsPrivacy = '/settings/privacy';
-  static const settingsNotifications = '/settings/notifications';
-  static const settingsHelp = '/settings/help';
   static const settingsAbout = '/settings/about';
 
   static String spotDetail(String id) => '/spots/$id';
@@ -203,36 +202,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: AppRoutes.settingsNotifications,
-        parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => smoothPage(
-          state: state,
-          child: const ComingSoonScreen(
-            title: 'Notificaciones',
-            icon: Icons.notifications_none_outlined,
-          ),
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.settingsHelp,
-        parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => smoothPage(
-          state: state,
-          child: const ComingSoonScreen(
-            title: 'Ayuda',
-            icon: Icons.help_outline,
-          ),
-        ),
-      ),
-      GoRoute(
         path: AppRoutes.settingsAbout,
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => smoothPage(
           state: state,
-          child: const ComingSoonScreen(
-            title: 'Acerca de',
-            icon: Icons.info_outline,
-          ),
+          child: const AboutScreen(),
         ),
       ),
     ],

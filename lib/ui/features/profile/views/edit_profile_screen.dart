@@ -10,6 +10,8 @@ import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/profile.dart';
 import 'package:spot_for_fun/ui/features/profile/view_models/edit_profile_view_model.dart';
 import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -169,7 +171,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         backgroundColor: theme.colorScheme.surface,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
-          title: const Text('Editar perfil'),
+          title: const Text('EDITAR PERFIL'),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -181,7 +183,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
-        title: const Text('Editar perfil'),
+        title: const Text('EDITAR PERFIL'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -208,8 +210,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           label: Text(
                             state.pendingAvatarBytes != null ||
                                     state.removeAvatar
-                                ? 'Cambiar foto'
-                                : 'Elegir foto',
+                                ? 'CAMBIAR FOTO'
+                                : 'ELEGIR FOTO',
                           ),
                         ),
                         if ((_profile?.avatarUrl != null &&
@@ -226,7 +228,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               color: theme.colorScheme.error,
                             ),
                             label: Text(
-                              'Quitar',
+                              'QUITAR',
                               style: TextStyle(color: theme.colorScheme.error),
                             ),
                           ),
@@ -335,7 +337,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 segments: const [
                   ButtonSegment(
                     value: DisplayAs.username,
-                    label: Text('Nombre'),
+                    label: Text('NOMBRE'),
                     icon: Icon(Icons.person_outline),
                   ),
                   ButtonSegment(
@@ -382,10 +384,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           width: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.4,
-                            color: Colors.white,
+                            color: AppColors.asphalt,
                           ),
                         )
-                      : const Text('Guardar cambios'),
+                      : const Text('GUARDAR CAMBIOS'),
                 ),
               ),
             ],
@@ -403,10 +405,8 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      text,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+      text.toUpperCase(),
+      style: AppTheme.label(12, color: AppColors.boneMuted),
     );
   }
 }
@@ -423,7 +423,7 @@ class _Banner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,23 +472,30 @@ class _AvatarPreview extends StatelessWidget {
         url: profile?.avatarUrl,
         fallbackSeed: username,
         size: size,
-        borderColor: theme.colorScheme.outline.withValues(alpha: 0.6),
       );
     }
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.5),
-          width: 1.5,
+    return Transform.rotate(
+      angle: -0.05,
+      child: Container(
+        width: size + 8,
+        height: size + 8,
+        color: AppColors.tape,
+        alignment: Alignment.center,
+        child: Transform.rotate(
+          angle: 0.05,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.asphalt, width: 3),
+            ),
+            clipBehavior: Clip.antiAlias,
+            alignment: Alignment.center,
+            child: content,
+          ),
         ),
       ),
-      clipBehavior: Clip.antiAlias,
-      alignment: Alignment.center,
-      child: content,
     );
   }
 }

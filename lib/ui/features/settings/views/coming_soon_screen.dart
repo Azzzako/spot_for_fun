@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+
 class ComingSoonScreen extends StatelessWidget {
   const ComingSoonScreen({
     super.key,
@@ -12,38 +15,24 @@ class ComingSoonScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: theme.colorScheme.surface,
-        title: Text(title),
-      ),
+      appBar: AppBar(title: Text(title.toUpperCase())),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 56,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
+              Icon(icon, size: 48, color: AppColors.boneMuted),
               const SizedBox(height: 16),
-              Text(
-                'Próximamente',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              Text('PRÓXIMAMENTE', style: AppTheme.display(30)),
               const SizedBox(height: 8),
               Text(
                 'Esta sección estará disponible en una próxima actualización.',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.boneMuted,
+                    ),
               ),
             ],
           ),

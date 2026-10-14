@@ -217,6 +217,29 @@ class AppTheme {
           borderRadius: BorderRadius.all(Radius.circular(3)),
         ),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected)
+                ? AppColors.tape
+                : Colors.transparent,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected)
+                ? AppColors.asphalt
+                : AppColors.bone,
+          ),
+          side: const WidgetStatePropertyAll(
+            BorderSide(color: AppColors.lineStrong, width: 1.5),
+          ),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(3)),
+            ),
+          ),
+          textStyle: WidgetStatePropertyAll(label(12)),
+        ),
+      ),
       tabBarTheme: TabBarThemeData(
         indicator: const UnderlineTabIndicator(
           borderSide: BorderSide(color: AppColors.tape, width: 4),
