@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_up_view_model.dart';
+import 'package:spot_for_fun/ui/features/profile/view_models/edit_profile_view_model.dart'
+    show usernameRegex;
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -146,8 +148,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       validator: (v) {
                         final s = v?.trim() ?? '';
                         if (s.isEmpty) return 'Requerido';
-                        if (s.length < 3) return 'Mínimo 3 caracteres';
-                        if (s.length > 24) return 'Máximo 24';
+                        // Same rule as Edit Profile and handle_new_user.
+                        if (!usernameRegex.hasMatch(s)) {
+                          return '3 a 20 letras, números o _';
+                        }
                         return null;
                       },
                     ),

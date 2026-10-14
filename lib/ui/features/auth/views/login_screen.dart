@@ -38,6 +38,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    final ok =
+        await ref.read(signInViewModelProvider.notifier).signInWithGoogle();
+    if (!mounted) return;
+    if (ok) context.go(AppRoutes.map);
+  }
+
   void _openForgotPassword() {
     showModalBottomSheet<void>(
       context: context,
@@ -212,7 +219,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: Icons.g_mobiledata_rounded,
                       label: 'Continuar con Google',
                       enabled: !loading,
-                      onPressed: _submit,
+                      onPressed: _signInWithGoogle,
                     ),
                     const SizedBox(height: 10),
                     _SocialButton(

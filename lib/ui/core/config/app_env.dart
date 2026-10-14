@@ -21,6 +21,17 @@ class AppEnv {
     return dotenv.env['SUPABASE_PUBLISHABLE_KEY'] ?? '';
   }
 
+  /// OAuth *Web* client ID from Google Cloud. google_sign_in needs it as
+  /// serverClientId to return the idToken that Supabase verifies.
+  static String get googleWebClientId {
+    final fromEnv = const String.fromEnvironment(
+      'GOOGLE_WEB_CLIENT_ID',
+      defaultValue: '',
+    );
+    if (fromEnv.isNotEmpty) return fromEnv;
+    return dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
+  }
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
 }

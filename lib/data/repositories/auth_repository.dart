@@ -1,9 +1,10 @@
 export 'package:spot_for_fun/data/services/auth_service.dart'
-    show AppAuthException, AuthResult;
+    show AppAuthException, AuthCancelledException, AuthResult;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:spot_for_fun/data/services/auth_service.dart';
+import 'package:spot_for_fun/ui/core/config/app_env.dart';
 import 'package:spot_for_fun/ui/core/providers/supabase_client_provider.dart';
 
 class AuthRepository {
@@ -45,7 +46,7 @@ class AuthRepository {
 
 final authServiceProvider = Provider<AuthService>((ref) {
   final client = ref.watch(supabaseClientProvider);
-  return AuthService(client);
+  return AuthService(client, AppEnv.googleWebClientId);
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

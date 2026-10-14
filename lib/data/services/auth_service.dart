@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,9 +15,13 @@ class AppAuthException implements Exception {
   String toString() => message;
 }
 
+/// The user closed the Google account picker; not an error to show.
+class AuthCancelledException implements Exception {}
+
 class AuthService {
-  AuthService(this._client);
+  AuthService(this._client, this._googleWebClientId);
   final SupabaseClient _client;
+  final String _googleWebClientId;
 
   /// Deep link the recovery email opens. Registered as an intent filter
   /// in AndroidManifest.xml and in Supabase › Auth › Redirect URLs.
@@ -24,8 +29,10 @@ class AuthService {
       'io.supabase.spotforfun://reset-password';
   GoogleSignIn? _google;
 
-  GoogleSignIn _ensureGoogle() =>
-      _google ??= GoogleSignIn(scopes: const ['email', 'profile']);
+  GoogleSignIn _ensureGoogle() => _google ??= GoogleSignIn(
+        scopes: const ['email', 'profile'],
+        serverClientId: _googleWebClientId,
+      );
 
   Future<AuthResult> signUp({
     required String email,
@@ -69,23 +76,26 @@ class AuthService {
   }
 
   Future<AuthResult> signInWithGoogle() async {
+    if (_googleWebClientId.isEmpty) {
+      debugPrint('[SpotForFun] Falta GOOGLE_WEB_CLIENT_ID en .env');
+      throw AppAuthException('Inicio con Google no disponible.');
+    }
     final google = _ensureGoogle();
-    final GoogleSignInAccount googleUser;
+    final String? idToken;
     try {
       final account = await google.signIn();
-      if (account == null) {
-        throw AppAuthException('Inicio cancelado.');
-      }
-      googleUser = account;
-    } on AppAuthException {
+      if (account == null) throw AuthCancelledException();
+      idToken = (await account.authentication).idToken;
+    } on AuthCancelledException {
       rethrow;
     } catch (e) {
-      throw AppAuthException('Google sign-in falló: $e');
+      // ApiException 10 = SHA-1 / package / client ID mismatch in Google Cloud.
+      debugPrint('google signIn failed: $e');
+      throw AppAuthException('No se pudo iniciar con Google. Inténtalo de nuevo.');
     }
-    final auth = await googleUser.authentication;
-    final idToken = auth.idToken;
     if (idToken == null) {
-      throw AppAuthException('Google no devolvió token.');
+      debugPrint('google signIn: no idToken (check serverClientId)');
+      throw AppAuthException('No se pudo iniciar con Google. Inténtalo de nuevo.');
     }
     try {
       final res = await _client.auth.signInWithIdToken(
@@ -102,7 +112,14 @@ class AuthService {
     }
   }
 
-  Future<void> signOut() => _client.auth.signOut();
+  Future<void> signOut() async {
+    await _client.auth.signOut();
+    // Forget the Google account too, so the next Google login shows the
+    // account picker instead of silently reusing the last account.
+    try {
+      await _ensureGoogle().signOut();
+    } catch (_) {}
+  }
 
   Future<void> updateEmail(String newEmail) async {
     try {
