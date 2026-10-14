@@ -9,7 +9,6 @@ class ProfileDto {
     this.instagram,
     this.avatarUrl,
     required this.role,
-    this.fcmToken,
     required this.createdAt,
     this.displayAs = DisplayAs.username,
   });
@@ -20,7 +19,6 @@ class ProfileDto {
   final String? instagram;
   final String? avatarUrl;
   final UserRole role;
-  final String? fcmToken;
   final DateTime createdAt;
   final DisplayAs displayAs;
 
@@ -34,7 +32,6 @@ class ProfileDto {
       instagram: map['instagram'] as String?,
       avatarUrl: map['avatar_url'] as String?,
       role: UserRoleX.fromDb(map['role']),
-      fcmToken: map['fcm_token'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
       displayAs: DisplayAsX.fromDb(map['display_as']),
     );
@@ -47,7 +44,6 @@ class ProfileDto {
         'instagram': instagram,
         'avatar_url': avatarUrl,
         'role': role.dbValue,
-        'fcm_token': fcmToken,
         'display_as': displayAs.dbValue,
       };
 
@@ -56,7 +52,6 @@ class ProfileDto {
     String? aka,
     String? instagram,
     String? avatarUrl,
-    String? fcmToken,
     DisplayAs? displayAs,
   }) {
     return ProfileDto(
@@ -66,7 +61,6 @@ class ProfileDto {
       instagram: instagram ?? this.instagram,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role,
-      fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt,
       displayAs: displayAs ?? this.displayAs,
     );

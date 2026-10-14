@@ -9,7 +9,6 @@ class Profile {
     this.instagram,
     this.avatarUrl,
     required this.role,
-    this.fcmToken,
     required this.createdAt,
     this.displayAs = DisplayAs.username,
   });
@@ -20,7 +19,6 @@ class Profile {
   final String? instagram;
   final String? avatarUrl;
   final UserRole role;
-  final String? fcmToken;
   final DateTime createdAt;
   final DisplayAs displayAs;
 
@@ -39,7 +37,6 @@ class Profile {
     String? aka,
     String? instagram,
     String? avatarUrl,
-    String? fcmToken,
     DisplayAs? displayAs,
   }) {
     return Profile(
@@ -49,7 +46,6 @@ class Profile {
       instagram: instagram ?? this.instagram,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role,
-      fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt,
       displayAs: displayAs ?? this.displayAs,
     );

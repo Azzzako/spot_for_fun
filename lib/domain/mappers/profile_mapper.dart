@@ -10,7 +10,6 @@ extension ProfileDtoMapper on ProfileDto {
       instagram: instagram,
       avatarUrl: avatarUrl,
       role: role,
-      fcmToken: fcmToken,
       createdAt: createdAt,
       displayAs: displayAs,
     );
