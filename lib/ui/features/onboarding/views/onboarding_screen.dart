@@ -78,7 +78,8 @@ class OnboardingScreen extends ConsumerWidget {
                       .read(onboardingCompletedProvider.notifier)
                       .markSeen();
                   if (!context.mounted) return;
-                  context.go(AppRoutes.splash);
+                  // The router redirect sends signed-out users to login.
+                  context.go(AppRoutes.map);
                 },
                 child: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),

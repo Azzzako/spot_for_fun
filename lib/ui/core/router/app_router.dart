@@ -88,9 +88,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final session = authAsync.whenOrNull(data: (s) => s.session);
       final loc = state.matchedLocation;
       final atSplash = loc == AppRoutes.splash;
+      final atOnboarding = loc == AppRoutes.onboarding;
       final loggingIn = loc == AppRoutes.login || loc == AppRoutes.register;
 
-      if (atSplash) return null;
+      // Splash decides where to go; onboarding is shown before login.
+      if (atSplash || atOnboarding) return null;
 
       if (session == null) return loggingIn ? null : AppRoutes.login;
       if (loggingIn) return AppRoutes.map;
