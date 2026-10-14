@@ -36,6 +36,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Deep links are handled by supabase_flutter (app_links); stop
+             Flutter from also pushing them as routes into go_router. -->
+        <meta-data
+            android:name="flutter_deeplinking_enabled"
+            android:value="false" />
     </application>
     <queries>
         <intent>

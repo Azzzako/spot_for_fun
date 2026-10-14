@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:spot_for_fun/ui/core/router/app_router.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/features/auth/view_models/password_reset_view_model.dart';
 import 'package:spot_for_fun/ui/features/auth/view_models/sign_in_view_model.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -35,6 +36,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (ok) {
       context.go(AppRoutes.map);
     }
+  }
+
+  void _openForgotPassword() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) =>
+          _ForgotPasswordSheet(initialEmail: _emailCtrl.text.trim()),
+    );
   }
 
   void _showSnack(String message) {
@@ -147,7 +158,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: loading ? null : () {},
+                        onPressed: loading ? null : _openForgotPassword,
                         child: const Text('¿Olvidaste tu contraseña?'),
                       ),
                     ),
@@ -240,6 +251,145 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ForgotPasswordSheet extends ConsumerStatefulWidget {
+  const _ForgotPasswordSheet({required this.initialEmail});
+  final String initialEmail;
+
+  @override
+  ConsumerState<_ForgotPasswordSheet> createState() =>
+      _ForgotPasswordSheetState();
+}
+
+class _ForgotPasswordSheetState extends ConsumerState<_ForgotPasswordSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final _emailCtrl = TextEditingController(text: widget.initialEmail);
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (!_formKey.currentState!.validate()) return;
+    await ref
+        .read(passwordResetViewModelProvider.notifier)
+        .sendResetEmail(_emailCtrl.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(passwordResetViewModelProvider);
+    final loading = state.status == AuthFormStatus.loading;
+    final sent = state.status == AuthFormStatus.success;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 8,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              sent ? 'Revisa tu correo' : 'Recuperar contraseña',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              sent
+                  ? 'Si hay una cuenta con ese correo, te enviamos un enlace '
+                      'para cambiar la contraseña.'
+                  : 'Te enviaremos un enlace para elegir una contraseña nueva.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.smartphone_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Abre el enlace desde este teléfono. Si lo abres en '
+                      'una computadora no funcionará y tendrás que pedir '
+                      'otro.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!sent) ...[
+              const SizedBox(height: 16),
+              _AuthField(
+                controller: _emailCtrl,
+                label: 'Correo electrónico',
+                icon: Icons.alternate_email,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _send(),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Requerido';
+                  if (!v.contains('@')) return 'Correo inválido';
+                  return null;
+                },
+              ),
+            ],
+            if (state.status == AuthFormStatus.error &&
+                state.errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                state.errorMessage!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: loading
+                  ? null
+                  : sent
+                      ? () => Navigator.of(context).pop()
+                      : _send,
+              child: Text(
+                loading
+                    ? 'Enviando…'
+                    : sent
+                        ? 'Entendido'
+                        : 'Enviar enlace',
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );

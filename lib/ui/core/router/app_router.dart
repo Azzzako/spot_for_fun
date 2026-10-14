@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent;
 
 import 'package:spot_for_fun/ui/features/admin/views/admin_pending_screen.dart';
 import 'package:spot_for_fun/data/repositories/auth_provider.dart';
 import 'package:spot_for_fun/ui/features/auth/views/login_screen.dart';
 import 'package:spot_for_fun/ui/features/auth/views/register_screen.dart';
+import 'package:spot_for_fun/ui/features/auth/views/reset_password_screen.dart';
 import 'package:spot_for_fun/ui/features/map/views/map_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/edit_profile_screen.dart';
 import 'package:spot_for_fun/ui/features/profile/views/profile_screen.dart';
@@ -59,6 +61,7 @@ class AppRoutes {
   static const splash = '/splash';
   static const login = '/login';
   static const register = '/register';
+  static const resetPassword = '/reset-password';
   static const map = '/';
   static const spotCreate = '/spots/create';
   static const mySpots = '/spots/mine';
@@ -77,15 +80,18 @@ class AppRoutes {
 }
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final authAsync = ref.watch(authStateProvider);
-
+  // Read auth inside redirect instead of watching it here: watching
+  // rebuilt the whole GoRouter on every auth event (token refresh,
+  // recovery…), throwing the user back to the splash.
+  // _AuthListenable re-runs redirect when the auth state changes.
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     refreshListenable: _AuthListenable(ref),
     debugLogDiagnostics: false,
     redirect: (context, state) {
-      final session = authAsync.whenOrNull(data: (s) => s.session);
+      final auth = ref.read(authStateProvider).valueOrNull;
+      final session = auth?.session;
       final loc = state.matchedLocation;
       final atSplash = loc == AppRoutes.splash;
       final atOnboarding = loc == AppRoutes.onboarding;
@@ -95,6 +101,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       if (atSplash || atOnboarding) return null;
 
       if (session == null) return loggingIn ? null : AppRoutes.login;
+      // The recovery link signs the user in; keep them on the reset
+      // screen until they choose a new password or cancel.
+      if (auth?.event == AuthChangeEvent.passwordRecovery) {
+        return loc == AppRoutes.resetPassword ? null : AppRoutes.resetPassword;
+      }
       if (loggingIn) return AppRoutes.map;
       return null;
     },
@@ -150,6 +161,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => fadeThroughPage(
           state: state,
           child: const RegisterScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => fadeThroughPage(
+          state: state,
+          child: const ResetPasswordScreen(),
         ),
       ),
       GoRoute(

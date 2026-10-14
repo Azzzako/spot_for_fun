@@ -17,6 +17,11 @@ class AppAuthException implements Exception {
 class AuthService {
   AuthService(this._client);
   final SupabaseClient _client;
+
+  /// Deep link the recovery email opens. Registered as an intent filter
+  /// in AndroidManifest.xml and in Supabase › Auth › Redirect URLs.
+  static const passwordResetRedirect =
+      'io.supabase.spotforfun://reset-password';
   GoogleSignIn? _google;
 
   GoogleSignIn _ensureGoogle() =>
@@ -107,6 +112,27 @@ class AuthService {
     }
   }
 
+  /// Sends the recovery email. Opening the link on this device signs
+  /// the user in and emits [AuthChangeEvent.passwordRecovery].
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: passwordResetRedirect,
+      );
+    } on AuthException catch (e) {
+      throw AppAuthException(_mapError(e));
+    }
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      await _client.auth.updateUser(UserAttributes(password: newPassword));
+    } on AuthException catch (e) {
+      throw AppAuthException(_mapError(e));
+    }
+  }
+
   Future<void> resendConfirmation(String email) async {
     try {
       await _client.auth.resend(type: OtpType.email, email: email);
@@ -125,6 +151,12 @@ class AuthService {
     }
     if (m.contains('already') && m.contains('registered')) {
       return 'Ese correo ya está registrado.';
+    }
+    if (m.contains('rate limit') || m.contains('security purposes')) {
+      return 'Espera un momento antes de volver a intentarlo.';
+    }
+    if (m.contains('different from the old')) {
+      return 'La nueva contraseña debe ser distinta a la anterior.';
     }
     if (m.contains('password')) return 'La contraseña no cumple los requisitos.';
     if (m.contains('email')) return 'Correo inválido.';

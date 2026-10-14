@@ -33,6 +33,12 @@ class AuthRepository {
 
   Future<void> updateEmail(String newEmail) => _service.updateEmail(newEmail);
 
+  Future<void> sendPasswordReset(String email) =>
+      _service.sendPasswordReset(email);
+
+  Future<void> updatePassword(String newPassword) =>
+      _service.updatePassword(newPassword);
+
   Future<void> resendConfirmation(String email) =>
       _service.resendConfirmation(email);
 }
