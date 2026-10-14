@@ -34,7 +34,6 @@ dependencies:
 
   flutter_animate: ^4.5.0
   animations: ^2.0.11
-  flutter_compass: ^0.8.1
   share_plus: ^13.3.1
   app_links: ^7.2.2
   image: ^4.12.0

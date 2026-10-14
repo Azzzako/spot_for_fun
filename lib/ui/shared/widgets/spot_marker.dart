@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
 import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/shared/utils/compass.dart';
 
 enum SpotKind {
   street,
@@ -266,7 +266,7 @@ class UserLocationDot extends StatefulWidget {
 }
 
 class _UserLocationDotState extends State<UserLocationDot> {
-  StreamSubscription<CompassEvent>? _compass;
+  StreamSubscription<double>? _compass;
 
   /// Smoothed heading in degrees (0 = north), null until the first fix.
   double? _heading;
@@ -295,12 +295,12 @@ class _UserLocationDotState extends State<UserLocationDot> {
       _compass = null;
       return;
     }
-    _compass ??= FlutterCompass.events?.listen(_onCompass);
+    // A phone without a compass (or a platform without the channel)
+    // just keeps showing the dot.
+    _compass ??= Compass.headings.listen(_onCompass, onError: (Object _) {});
   }
 
-  void _onCompass(CompassEvent event) {
-    final raw = event.heading;
-    if (raw == null) return;
+  void _onCompass(double raw) {
     final current = _heading;
     if (current == null) {
       setState(() => _heading = raw % 360);
