@@ -129,7 +129,13 @@ class SpotRepository {
     required String spotId,
     required String reason,
   }) async {
-    await _service.reportSpot(spotId: spotId, reason: reason);
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) throw StateError('Necesitas iniciar sesión para reportar');
+    await _service.reportSpot(
+      reporterId: uid,
+      spotId: spotId,
+      reason: reason,
+    );
   }
 
   Future<Spot> createSpot({

@@ -247,10 +247,12 @@ class SpotService {
   }
 
   Future<void> reportSpot({
+    required String reporterId,
     required String spotId,
     required String reason,
   }) async {
     await _client.from('spot_reports').insert({
+      'reporter_id': reporterId,
       'spot_id': spotId,
       'reason': reason,
     });

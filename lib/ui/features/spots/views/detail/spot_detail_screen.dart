@@ -367,6 +367,8 @@ class _ReportSheet extends StatefulWidget {
 class _ReportSheetState extends State<_ReportSheet> {
   final _detailsCtrl = TextEditingController();
   _ReportCategory? _selected;
+  bool _sending = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -420,10 +422,19 @@ class _ReportSheetState extends State<_ReportSheet> {
               labelText: 'Detalles (opcional)',
             ),
           ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: _selected == null ? null : _submit,
-            child: const Text('Enviar reporte'),
+            onPressed: _selected == null || _sending ? null : _submit,
+            child: Text(_sending ? 'Enviando…' : 'Enviar reporte'),
           ),
           const SizedBox(height: 24),
         ],
@@ -439,7 +450,20 @@ class _ReportSheetState extends State<_ReportSheet> {
     final repo = ProviderScope.containerOf(context).read(spotRepositoryProvider);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(widget.parentContext);
-    await repo.reportSpot(spotId: widget.spotId, reason: reason);
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      await repo.reportSpot(spotId: widget.spotId, reason: reason);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _error = 'No se pudo enviar el reporte. Inténtalo de nuevo.';
+      });
+      return;
+    }
     navigator.pop();
     messenger.showSnackBar(
       const SnackBar(content: Text('Reporte enviado. Gracias.')),
