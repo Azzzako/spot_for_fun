@@ -1,30 +1,20 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-enum PhotoSource { asset, file }
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 
+enum PhotoSource { file }
+
+/// A photo picked on the device, waiting to be uploaded.
 class PhotoItem {
-  const PhotoItem.asset(this.assetPath)
-      : source = PhotoSource.asset,
-        bytes = null,
-        ext = 'jpg';
-
-  const PhotoItem.file(this.bytes, this.ext) : source = PhotoSource.file, assetPath = null;
+  const PhotoItem.file(this.bytes, this.ext) : source = PhotoSource.file;
 
   final PhotoSource source;
-  final String? assetPath;
   final Uint8List? bytes;
   final String ext;
-
-  String get displayLabel {
-    if (source == PhotoSource.asset) return assetPath!.split('/').last;
-    return 'foto.$ext';
-  }
 }
-
-typedef PhotoPickerCallback = Future<void> Function(PhotoItem photo);
 
 class PhotoPickerGrid extends StatelessWidget {
   const PhotoPickerGrid({
@@ -41,53 +31,41 @@ class PhotoPickerGrid extends StatelessWidget {
   Future<void> _addPhoto(BuildContext context) async {
     if (photos.length >= maxPhotos) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Maximo $maxPhotos fotos')),
+        SnackBar(content: Text('Máximo $maxPhotos fotos')),
       );
       return;
     }
-    final action = await showModalBottomSheet<String>(
+    final source = await showModalBottomSheet<ImageSource>(
       context: context,
       showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Wrap(
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Tomar foto'),
-              onTap: () => Navigator.of(context).pop('camera'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Elegir de galeria'),
-              onTap: () => Navigator.of(context).pop('gallery'),
+              title: const Text('Elegir de la galería'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
             ),
-            ListTile(
-              leading: const Icon(Icons.close),
-              title: const Text('Cancelar'),
-              onTap: () => Navigator.of(context).pop(null),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
-    if (action == null || !context.mounted) return;
+    if (source == null || !context.mounted) return;
 
-    final picker = ImagePicker();
     XFile? file;
     try {
-      if (action == 'camera') {
-        file = await picker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 2048,
-          imageQuality: 85,
-        );
-      } else {
-        file = await picker.pickImage(
-          source: ImageSource.gallery,
-          maxWidth: 2048,
-          imageQuality: 85,
-        );
-      }
+      file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 2048,
+        imageQuality: 85,
+      );
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -100,23 +78,23 @@ class PhotoPickerGrid extends StatelessWidget {
     if (file == null) return;
     final bytes = await file.readAsBytes();
     final ext = file.path.split('.').last.toLowerCase();
-    final safeExt = (ext == 'png' || ext == 'webp' || ext == 'jpeg' || ext == 'jpg')
-        ? (ext == 'jpeg' ? 'jpg' : ext)
-        : 'jpg';
+    final safeExt = switch (ext) {
+      'png' || 'webp' || 'jpg' => ext,
+      _ => 'jpg',
+    };
 
-    final newPhoto = PhotoItem.file(bytes, safeExt);
     if (context.mounted) {
-      onPhotosChanged([...photos, newPhoto]);
+      onPhotosChanged([...photos, PhotoItem.file(bytes, safeExt)]);
     }
   }
 
-  void _removePhoto(BuildContext context, int index) {
-    final next = [...photos]..removeAt(index);
-    onPhotosChanged(next);
+  void _removePhoto(int index) {
+    onPhotosChanged([...photos]..removeAt(index));
   }
 
   @override
   Widget build(BuildContext context) {
+    final canAdd = photos.length < maxPhotos;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -124,27 +102,30 @@ class PhotoPickerGrid extends StatelessWidget {
         crossAxisCount: 3,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: 1,
       ),
-      itemCount: photos.length + 1,
+      itemCount: photos.length + (canAdd ? 1 : 0),
       itemBuilder: (ctx, i) {
         if (i == photos.length) {
-          return InkWell(
-            onTap: () => _addPhoto(ctx),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(ctx).colorScheme.outlineVariant,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: Icon(
-                Icons.add_a_photo_outlined,
-                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                size: 32,
+          return Material(
+            color: AppColors.concrete,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+              side: const BorderSide(color: AppColors.lineStrong, width: 1.5),
+            ),
+            child: InkWell(
+              onTap: () => _addPhoto(ctx),
+              borderRadius: BorderRadius.circular(4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.add_a_photo_outlined,
+                    color: AppColors.tape,
+                    size: 28,
+                  ),
+                  const SizedBox(height: 6),
+                  Text('AGREGAR', style: AppTheme.label(10)),
+                ],
               ),
             ),
           );
@@ -154,75 +135,54 @@ class PhotoPickerGrid extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _Thumb(photo: photo),
+              borderRadius: BorderRadius.circular(4),
+              child: Image.memory(
+                photo.bytes!,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: AppColors.concreteHigh,
+                  child: Icon(Icons.broken_image, color: AppColors.boneMuted),
+                ),
+              ),
             ),
+            if (i == 0)
+              Positioned(
+                left: 0,
+                bottom: 0,
+                child: Container(
+                  color: AppColors.tape,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    'PORTADA',
+                    style: AppTheme.label(9, color: AppColors.asphalt),
+                  ),
+                ),
+              ),
             Positioned(
               top: 4,
               right: 4,
               child: Material(
-                color: Colors.black54,
-                shape: const CircleBorder(),
+                color: AppColors.asphalt.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(3),
                 child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _removePhoto(ctx, i),
+                  borderRadius: BorderRadius.circular(3),
+                  onTap: () => _removePhoto(i),
                   child: const Padding(
                     padding: EdgeInsets.all(4),
-                    child: Icon(Icons.close, size: 16, color: Colors.white),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: AppColors.bone,
+                      semanticLabel: 'Quitar foto',
+                    ),
                   ),
                 ),
               ),
             ),
-            if (photo.source == PhotoSource.asset)
-              Positioned(
-                left: 4,
-                bottom: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'demo',
-                    style: TextStyle(color: Colors.white, fontSize: 10),
-                  ),
-                ),
-              ),
           ],
         );
       },
-    );
-  }
-}
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.photo});
-  final PhotoItem photo;
-
-  @override
-  Widget build(BuildContext context) {
-    if (photo.source == PhotoSource.asset) {
-      return Image.asset(
-        photo.assetPath!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => Container(
-          color: Colors.black12,
-          child: const Icon(Icons.broken_image, size: 32),
-        ),
-      );
-    }
-    return Image.memory(
-      photo.bytes!,
-      fit: BoxFit.cover,
-      gaplessPlayback: true,
-      errorBuilder: (_, _, _) => Container(
-        color: Colors.black12,
-        child: const Icon(Icons.broken_image, size: 32),
-      ),
     );
   }
 }

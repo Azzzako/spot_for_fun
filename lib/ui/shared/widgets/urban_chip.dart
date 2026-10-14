@@ -38,9 +38,10 @@ class UrbanChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(3),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
+            // No alignment here: it would make the chip fill the whole
+            // row inside a Wrap.
             height: 34,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            alignment: Alignment.center,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

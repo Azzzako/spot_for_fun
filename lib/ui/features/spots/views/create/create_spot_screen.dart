@@ -10,6 +10,10 @@ import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/photo_picker_grid.dart';
 import 'package:spot_for_fun/ui/features/spots/view_models/create_spot_view_model.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
+import 'package:spot_for_fun/ui/shared/widgets/urban_map.dart';
 
 class CreateSpotScreen extends ConsumerStatefulWidget {
   const CreateSpotScreen({super.key});
@@ -98,22 +102,12 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: theme.colorScheme.surface,
         leading: IconButton(
+          tooltip: 'Cerrar',
           icon: const Icon(Icons.close),
           onPressed: busy ? null : () => Navigator.of(context).maybePop(),
         ),
-        title: const Text('Agregar spot'),
-        actions: [
-          IconButton(
-            tooltip: 'Compartir borrador',
-            icon: const Icon(Icons.ios_share_rounded),
-            onPressed: busy
-                ? null
-                : () => _snack('Compartir · próximamente'),
-          ),
-          const SizedBox(width: 4),
-        ],
+        title: const Text('AGREGAR SPOT'),
       ),
       body: Stack(
         children: [
@@ -162,11 +156,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                             _Label('Tipo de spot'),
                             const SizedBox(height: 10),
                             Wrap(
-                              spacing: 8,
+                              spacing: 6,
                               runSpacing: 8,
                               children: SpotType.values.map((t) {
                                 final selected = state.type == t;
-                                return _TypeChip(
+                                return UrbanChip(
                                   label: t.label,
                                   selected: selected,
                                   onTap: () => vm.setType(t),
@@ -203,11 +197,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                             _Label('Nivel'),
                             const SizedBox(height: 10),
                             Wrap(
-                              spacing: 8,
+                              spacing: 6,
                               runSpacing: 8,
                               children: SpotDifficulty.values.map((d) {
                                 final selected = state.difficulty == d;
-                                return _TypeChip(
+                                return UrbanChip(
                                   label: d.label,
                                   selected: selected,
                                   onTap: () => vm.setDifficulty(d),
@@ -228,11 +222,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                             _Label('Mejor hora para ir'),
                             const SizedBox(height: 10),
                             Wrap(
-                              spacing: 8,
+                              spacing: 6,
                               runSpacing: 8,
                               children: BestTimeSlot.values.map((b) {
                                 final selected = state.bestTime.contains(b);
-                                return _TypeChip(
+                                return UrbanChip(
                                   label: b.label,
                                   selected: selected,
                                   onTap: () => vm.toggleBestTime(b),
@@ -295,11 +289,11 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                                 width: 22,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.4,
-                                  color: Colors.white,
+                                  color: AppColors.asphalt,
                                 ),
                               )
                             : Text(
-                                locked ? 'Reintentar fotos' : 'Publicar spot',
+                                locked ? 'REINTENTAR FOTOS' : 'PUBLICAR SPOT',
                               ),
                       ),
                     ),
@@ -311,7 +305,7 @@ class _CreateSpotScreenState extends ConsumerState<CreateSpotScreen> {
                         height: 48,
                         child: OutlinedButton(
                           onPressed: _finishWithoutMissingPhotos,
-                          child: const Text('Continuar sin ellas'),
+                          child: const Text('CONTINUAR SIN ELLAS'),
                         ),
                       ),
                     ],
@@ -333,10 +327,8 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      text,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+      text.toUpperCase(),
+      style: AppTheme.label(12, color: AppColors.boneMuted),
     );
   }
 }
@@ -352,45 +344,26 @@ class _PhotosCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.camera_alt_outlined,
-                  color: theme.colorScheme.onSurface),
-              const SizedBox(width: 10),
-              Text(
-                'Agregar fotos',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                'Mínimo 1 · máximo 3',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          PhotoPickerGrid(
-            photos: photos,
-            onPhotosChanged: onPhotosChanged,
-            maxPhotos: 3,
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const _Label('Fotos'),
+            const Spacer(),
+            Text(
+              'MÍNIMO 1 · MÁXIMO 3',
+              style: AppTheme.label(10, color: AppColors.boneMuted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        PhotoPickerGrid(
+          photos: photos,
+          onPhotosChanged: onPhotosChanged,
+          maxPhotos: 3,
+        ),
+      ],
     );
   }
 }
@@ -414,127 +387,98 @@ class _LocationPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      height: 200,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline),
-      ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: FlutterMap(
-              mapController: controller,
-              options: MapOptions(
-                initialCenter: location ?? LocationHelper.neutralCenter,
-                initialZoom: 16,
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.pinchZoom |
-                      InteractiveFlag.drag |
-                      InteractiveFlag.doubleTapZoom,
-                ),
-                onTap: (_, point) => onPick(point),
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.spotforfun.app',
-                  tileProvider: NetworkTileProvider(),
-                ),
-                if (location != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: location!,
-                        width: 32,
-                        height: 32,
-                        child: const Icon(
-                          Icons.location_on,
-                          size: 32,
-                          color: AppColors.tape,
-                        ),
-                      ),
-                    ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: 220,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.asphalt,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: AppColors.lineStrong, width: 1.5),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: FlutterMap(
+                  mapController: controller,
+                  options: MapOptions(
+                    initialCenter: location ?? LocationHelper.neutralCenter,
+                    initialZoom: 16,
+                    backgroundColor: AppColors.asphalt,
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.pinchZoom |
+                          InteractiveFlag.drag |
+                          InteractiveFlag.doubleTapZoom,
+                    ),
+                    onTap: (_, point) => onPick(point),
                   ),
-              ],
-            ),
-          ),
-          if (!hydrated || relocating)
-            Container(
-              color: Colors.black.withValues(alpha: 0.15),
-              alignment: Alignment.center,
-              child: const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
+                  children: [
+                    const UrbanTileLayer(),
+                    if (location != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: location!,
+                            width: 44,
+                            height: 44,
+                            child: const SpotRhombusMarker(selected: true),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-            ),
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Material(
-              color: theme.colorScheme.surface,
-              shape: const CircleBorder(),
-              elevation: 2,
-              child: IconButton(
-                tooltip: 'Reubicar',
-                icon: Icon(Icons.my_location,
-                    color: theme.colorScheme.primary),
-                onPressed: relocating ? null : onRelocate,
+              if (!hydrated || relocating)
+                const ColoredBox(
+                  color: Color(0x55111111),
+                  child: Center(
+                    child: SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                  ),
+                ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Tooltip(
+                  message: 'Usar mi ubicación',
+                  child: Material(
+                    color: AppColors.asphalt,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                      side: const BorderSide(
+                        color: AppColors.lineStrong,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(4),
+                      onTap: relocating ? null : onRelocate,
+                      child: const SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Icon(Icons.my_location, color: AppColors.tape),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline,
+              const Positioned(left: 6, bottom: 6, child: OsmAttribution()),
+            ],
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurface,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-          ),
+        const SizedBox(height: 6),
+        Text(
+          'Toca el mapa para mover el rombo al lugar exacto.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.boneMuted,
+              ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -557,17 +501,19 @@ class _Banner extends StatelessWidget {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: error
-            ? theme.colorScheme.errorContainer
-            : theme.colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.concrete,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: error ? AppColors.danger : AppColors.tape,
+          width: 1.5,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Icon(icon, size: 20, color: error ? AppColors.danger : AppColors.tape),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );
@@ -586,10 +532,10 @@ class _UploadProgress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Subiendo fotos $current de ${total == 0 ? 'skipped' : total}',
-          style: Theme.of(context).textTheme.bodySmall,
+          'SUBIENDO FOTOS $current DE $total',
+          style: AppTheme.label(11, color: AppColors.boneMuted),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         LinearProgressIndicator(value: pct),
       ],
     );

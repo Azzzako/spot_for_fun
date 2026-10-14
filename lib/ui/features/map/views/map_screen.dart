@@ -5,7 +5,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
 import 'package:spot_for_fun/data/services/spot_service.dart' show SpotFilter;
@@ -21,31 +20,7 @@ import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
 import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
-
-/// OSM's light tiles turned into an asphalt map: grayscale, inverted and
-/// slightly compressed so land sits near #131313 and labels stay light.
-const _darkTiles = ColorFilter.matrix(<double>[
-  -0.1807,
-  -0.6079,
-  -0.0614,
-  0,
-  224.75,
-  -0.1807,
-  -0.6079,
-  -0.0614,
-  0,
-  224.75,
-  -0.1807,
-  -0.6079,
-  -0.0614,
-  0,
-  224.75,
-  0,
-  0,
-  0,
-  1,
-  0,
-]);
+import 'package:spot_for_fun/ui/shared/widgets/urban_map.dart';
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -298,13 +273,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.spotforfun.app',
-                tileProvider: NetworkTileProvider(),
-                tileBuilder: (context, tile, _) =>
-                    ColorFiltered(colorFilter: _darkTiles, child: tile),
-              ),
+              const UrbanTileLayer(),
               if (state.hasRealLocation && state.currentLocation != null)
                 TweenAnimationBuilder<LatLng>(
                   // Glides between GPS fixes instead of jumping.
@@ -432,7 +401,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const _OsmAttribution(),
+                    const OsmAttribution(),
                     const Spacer(),
                     _SquareButton(
                       tooltip: _following
@@ -937,31 +906,5 @@ class _PopIn extends StatelessWidget {
           duration: 380.ms,
           curve: Curves.easeOutBack,
         );
-  }
-}
-
-/// OSM's tile policy asks for visible credit on the map.
-class _OsmAttribution extends StatelessWidget {
-  const _OsmAttribution();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.asphalt.withValues(alpha: 0.8),
-      borderRadius: BorderRadius.circular(3),
-      child: InkWell(
-        onTap: () => launchUrl(
-          Uri.parse('https://www.openstreetmap.org/copyright'),
-          mode: LaunchMode.externalApplication,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: Text(
-            '© OpenStreetMap',
-            style: AppTheme.label(10, color: AppColors.boneMuted),
-          ),
-        ),
-      ),
-    );
   }
 }
