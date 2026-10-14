@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 
 import 'package:spot_for_fun/domain/enums.dart';
 import 'package:spot_for_fun/domain/models/spot.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
 
 enum SpotKind {
   street,
@@ -210,4 +215,159 @@ class _CircularPin extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Urban map marker: a yellow rhombus, like a road-works sign. The
+/// selected spot gets a bigger one.
+class SpotRhombusMarker extends StatelessWidget {
+  const SpotRhombusMarker({super.key, required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final side = selected ? 26.0 : 16.0;
+    return Center(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutBack,
+        width: side,
+        height: side,
+        transform: Matrix4.rotationZ(math.pi / 4),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.tape,
+          border: Border.all(
+            color: AppColors.asphalt,
+            width: selected ? 4 : 3,
+          ),
+          boxShadow: const [
+            BoxShadow(color: AppColors.tape, spreadRadius: 1.5),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The user's position: bone dot ringed in yellow, with a translucent
+/// yellow beam showing which way the phone points (like Google Maps).
+/// The compass only runs while [showHeading] is true; phones without a
+/// compass sensor just get the dot.
+class UserLocationDot extends StatefulWidget {
+  const UserLocationDot({super.key, this.showHeading = false});
+
+  static const double size = 84;
+
+  final bool showHeading;
+
+  @override
+  State<UserLocationDot> createState() => _UserLocationDotState();
+}
+
+class _UserLocationDotState extends State<UserLocationDot> {
+  StreamSubscription<CompassEvent>? _compass;
+
+  /// Smoothed heading in degrees (0 = north), null until the first fix.
+  double? _heading;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncCompass();
+  }
+
+  @override
+  void didUpdateWidget(UserLocationDot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showHeading != widget.showHeading) _syncCompass();
+  }
+
+  @override
+  void dispose() {
+    _compass?.cancel();
+    super.dispose();
+  }
+
+  void _syncCompass() {
+    if (!widget.showHeading) {
+      _compass?.cancel();
+      _compass = null;
+      return;
+    }
+    _compass ??= FlutterCompass.events?.listen(_onCompass);
+  }
+
+  void _onCompass(CompassEvent event) {
+    final raw = event.heading;
+    if (raw == null) return;
+    final current = _heading;
+    if (current == null) {
+      setState(() => _heading = raw % 360);
+      return;
+    }
+    // Shortest way round (350° → 10° is +20°, not −340°), then ease a
+    // quarter of the way there so the beam doesn't jitter.
+    final delta = ((raw - current + 540) % 360) - 180;
+    if (delta.abs() < 1.5) return;
+    setState(() => _heading = (current + delta * 0.25) % 360);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final heading = _heading;
+    return SizedBox(
+      width: UserLocationDot.size,
+      height: UserLocationDot.size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (widget.showHeading && heading != null)
+            Transform.rotate(
+              angle: heading * math.pi / 180,
+              child: const CustomPaint(
+                size: Size.square(UserLocationDot.size),
+                painter: _HeadingBeamPainter(),
+              ),
+            ),
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: AppColors.bone,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.asphalt, width: 3),
+              boxShadow: const [
+                BoxShadow(color: AppColors.tape, spreadRadius: 2),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A 70° wedge pointing up (north before rotation).
+class _HeadingBeamPainter extends CustomPainter {
+  const _HeadingBeamPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2;
+    const sweep = 70 * math.pi / 180;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final path = Path()
+      ..moveTo(center.dx, center.dy)
+      ..arcTo(rect, -math.pi / 2 - sweep / 2, sweep, false)
+      ..close();
+    canvas.drawPath(
+      path,
+      Paint()..color = AppColors.tape.withValues(alpha: 0.32),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_HeadingBeamPainter oldDelegate) => false;
 }

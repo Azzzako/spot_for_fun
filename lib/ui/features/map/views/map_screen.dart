@@ -1,17 +1,51 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import 'package:spot_for_fun/ui/core/router/app_router.dart';
-import 'package:spot_for_fun/domain/models/spot.dart';
-import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
-import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
-import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/data/services/spot_service.dart' show SpotFilter;
+import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/domain/models/spot.dart';
+import 'package:spot_for_fun/ui/core/router/app_router.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 import 'package:spot_for_fun/ui/features/map/view_models/map_view_model.dart';
 import 'package:spot_for_fun/ui/features/map/widgets/filters_sheet.dart';
+import 'package:spot_for_fun/ui/features/social/view_models/social_view_model.dart';
+import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
+import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
+import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
+
+/// OSM's light tiles turned into an asphalt map: grayscale, inverted and
+/// slightly compressed so land sits near #131313 and labels stay light.
+const _darkTiles = ColorFilter.matrix(<double>[
+  -0.1807,
+  -0.6079,
+  -0.0614,
+  0,
+  224.75,
+  -0.1807,
+  -0.6079,
+  -0.0614,
+  0,
+  224.75,
+  -0.1807,
+  -0.6079,
+  -0.0614,
+  0,
+  224.75,
+  0,
+  0,
+  0,
+  1,
+  0,
+]);
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -22,32 +56,107 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final _mapController = MapController();
-  double _currentZoom = 15;
+  final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
+  String _query = '';
+  String? _selectedId;
+
+  // Live location: the GPS runs only while the map is actually on screen
+  // (its tab is active, nothing is pushed over it) and the app is in the
+  // foreground. "Follow" keeps the camera on the user until they drag.
+  late final MapViewModel _mapVm;
+  late final AppLifecycleListener _lifecycle;
+  bool _locationGranted = false;
+  bool _onScreen = true;
+  bool _inForeground = true;
+  bool _following = false;
 
   @override
   void initState() {
     super.initState();
+    _mapVm = ref.read(mapViewModelProvider.notifier);
+    _lifecycle = AppLifecycleListener(
+      onShow: () {
+        setState(() => _inForeground = true);
+        _syncTracking();
+      },
+      onHide: () {
+        setState(() => _inForeground = false);
+        _syncTracking();
+      },
+    );
+    _searchFocus.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Inactive shell tabs and routes covered by another page have their
+    // tickers disabled; use that as "the map isn't visible".
+    final onScreen = TickerMode.valuesOf(context).enabled;
+    if (onScreen != _onScreen) {
+      _onScreen = onScreen;
+      _syncTracking();
+    }
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    _mapVm.stopTracking();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  void _syncTracking() {
+    if (_locationGranted && _onScreen && _inForeground) {
+      _mapVm.startTracking();
+    } else {
+      _mapVm.stopTracking();
+    }
+  }
+
   Future<void> _bootstrap() async {
-    final status = await ref
-        .read(mapViewModelProvider.notifier)
-        .bootstrapLocation();
+    final status = await _mapVm.bootstrapLocation();
     if (!mounted) return;
     if (status == LocationStatus.granted) {
+      _locationGranted = true;
+      _syncTracking();
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 16);
+      if (loc != null) _mapController.move(loc, 15);
     }
     _showSnackForStatus(status);
   }
 
+  /// Locate button: jump to the user and follow them from now on.
+  Future<void> _onLocateTap() async {
+    final known = ref.read(mapViewModelProvider).currentLocation;
+    if (_mapVm.isTracking && known != null) {
+      setState(() => _following = true);
+      _mapController.move(known, _followZoom);
+      return;
+    }
+    await _recenter();
+  }
+
+  double get _followZoom {
+    final zoom = _mapController.camera.zoom;
+    return zoom < 16 ? 16 : zoom;
+  }
+
   Future<void> _recenter() async {
-    final status = await ref.read(mapViewModelProvider.notifier).recenter();
+    final status = await _mapVm.recenter();
     if (!mounted) return;
     if (status == LocationStatus.granted) {
+      _locationGranted = true;
+      _syncTracking();
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 17);
+      if (loc != null) {
+        setState(() => _following = true);
+        _mapController.move(loc, _followZoom);
+      }
     }
     _showSnackForStatus(status);
   }
@@ -55,59 +164,40 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void _showSnackForStatus(LocationStatus status) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
-    switch (status) {
-      case LocationStatus.serviceOff:
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('Activa tu GPS para mostrar tu ubicación'),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'Configurar',
-              onPressed: () => LocationHelper.openLocationSettings(),
-            ),
+    final (String text, String action, VoidCallback onAction)? snack =
+        switch (status) {
+          LocationStatus.serviceOff => (
+            'Activa tu GPS para mostrar tu ubicación',
+            'CONFIGURAR',
+            LocationHelper.openLocationSettings,
           ),
-        );
-        break;
-      case LocationStatus.denied:
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('Sin permiso de ubicación'),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'Reintentar',
-              onPressed: _recenter,
-            ),
+          LocationStatus.denied => (
+            'Sin permiso de ubicación',
+            'REINTENTAR',
+            _recenter,
           ),
-        );
-        break;
-      case LocationStatus.deniedForever:
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('Permiso de ubicación bloqueado'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'Abrir ajustes',
-              onPressed: () => LocationHelper.openAppSettings(),
-            ),
+          LocationStatus.deniedForever => (
+            'Permiso de ubicación bloqueado',
+            'ABRIR AJUSTES',
+            LocationHelper.openAppSettings,
           ),
-        );
-        break;
-      case LocationStatus.error:
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Text('Error al acceder a la ubicación'),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'Reintentar',
-              onPressed: _recenter,
-            ),
+          LocationStatus.error => (
+            'Error al acceder a la ubicación',
+            'REINTENTAR',
+            _recenter,
           ),
-        );
-        break;
-      case LocationStatus.granted:
-        break;
-    }
+          LocationStatus.granted => null,
+        };
+    if (snack == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(snack.$1),
+        duration: Duration(
+          seconds: status == LocationStatus.deniedForever ? 8 : 4,
+        ),
+        action: SnackBarAction(label: snack.$2, onPressed: snack.$3),
+      ),
+    );
   }
 
   void _openFilters() {
@@ -115,48 +205,68 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      enableDrag: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => const FiltersSheet(),
     );
   }
 
-  void _openSpotDetail(Spot spot) {
-    context.push(AppRoutes.spotDetail(spot.id));
+  void _select(Spot spot, {bool moveCamera = false}) {
+    setState(() => _selectedId = spot.id);
+    if (moveCamera) {
+      final zoom = _mapController.camera.zoom < 15
+          ? 15.0
+          : _mapController.camera.zoom;
+      _mapController.move(LatLng(spot.lat, spot.lng), zoom);
+    }
+  }
+
+  void _pickSearchResult(Spot spot) {
+    _searchFocus.unfocus();
+    _select(spot, moveCamera: true);
+  }
+
+  void _clearSearch() {
+    _searchCtrl.clear();
+    setState(() => _query = '');
+  }
+
+  void _toggleType(SpotFilter filter, SpotType type) {
+    final next = <SpotType>{...filter.types};
+    if (!next.remove(type)) next.add(type);
+    ref.read(spotFilterProvider.notifier).state = filter.copyWith(types: next);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      mapViewModelProvider.select((s) => s.currentLocation),
+      (_, next) {
+        if (_following && next != null) {
+          _mapController.move(next, _mapController.camera.zoom);
+        }
+      },
+    );
     final state = ref.watch(mapViewModelProvider);
     final spotsAsync = ref.watch(approvedSpotsProvider);
-    final brightness = Theme.of(context).brightness;
     final filter = ref.watch(spotFilterProvider);
-    final theme = Theme.of(context);
-    final showLabels = _currentZoom >= 14;
 
-    final activeChips = <Widget>[
-      if (filter.types.isNotEmpty)
-        _activeBadge(
-          context,
-          label: 'Tipo: ${filter.types.length}',
-          onClear: () => ref.read(spotFilterProvider.notifier).state =
-              filter.copyWith(types: const {}),
-        ),
-      if (filter.difficulties.isNotEmpty)
-        _activeBadge(
-          context,
-          label: 'Dif: ${filter.difficulties.length}',
-          onClear: () => ref.read(spotFilterProvider.notifier).state =
-              filter.copyWith(difficulties: const {}),
-        ),
-      if (filter.minRating > 0)
-        _activeBadge(
-          context,
-          label: '≥ ${filter.minRating.toStringAsFixed(1)}★',
-          onClear: () => ref.read(spotFilterProvider.notifier).state =
-              filter.copyWith(minRating: 0),
-        ),
-    ];
+    final spots = spotsAsync.valueOrNull ?? const <Spot>[];
+    final q = _query.trim().toLowerCase();
+    final visible = q.isEmpty
+        ? spots
+        : spots.where((s) => s.name.toLowerCase().contains(q)).toList();
+    Spot? selected;
+    for (final s in visible) {
+      if (s.id == _selectedId) selected = s;
+    }
+    final showResults = _searchFocus.hasFocus && q.isNotEmpty;
+    final showEmpty =
+        spotsAsync.hasValue &&
+        visible.isEmpty &&
+        (q.isNotEmpty || !filter.isEmpty);
+    final secondaryFilters =
+        filter.difficulties.length +
+        filter.bestTime.length +
+        (filter.minRating > 0 ? 1 : 0);
 
     return Scaffold(
       body: Stack(
@@ -164,68 +274,100 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
+              // North stays up, so the compass beam can use the raw
+              // heading (and nobody rotates the map by accident).
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+              ),
               initialCenter:
                   state.currentLocation ?? LocationHelper.neutralCenter,
-              initialZoom: 15,
+              initialZoom: state.currentLocation != null
+                  ? 15
+                  : LocationHelper.neutralZoom,
               minZoom: 3,
               maxZoom: 19,
-              onPositionChanged: (pos, _) {
-                final z = pos.zoom;
-                if (z != _currentZoom) {
-                  setState(() => _currentZoom = z);
+              backgroundColor: AppColors.asphalt,
+              onPositionChanged: (_, hasGesture) {
+                if (hasGesture && _following) {
+                  setState(() => _following = false);
                 }
+              },
+              onTap: (_, _) {
+                _searchFocus.unfocus();
+                if (_selectedId != null) setState(() => _selectedId = null);
               },
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.spotforfun.app',
                 tileProvider: NetworkTileProvider(),
+                tileBuilder: (context, tile, _) =>
+                    ColorFiltered(colorFilter: _darkTiles, child: tile),
               ),
+              if (state.hasRealLocation && state.currentLocation != null)
+                TweenAnimationBuilder<LatLng>(
+                  // Glides between GPS fixes instead of jumping.
+                  tween: _LatLngTween(
+                    begin: state.currentLocation,
+                    end: state.currentLocation,
+                  ),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, point, _) => MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: point,
+                        width: UserLocationDot.size,
+                        height: UserLocationDot.size,
+                        child: UserLocationDot(
+                          showHeading: _locationGranted &&
+                              _onScreen &&
+                              _inForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               MarkerLayer(
                 markers: [
-                  if (state.hasRealLocation && state.currentLocation != null)
+                  for (final s in visible)
                     Marker(
-                      point: state.currentLocation!,
-                      width: 32,
-                      height: 32,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.tape,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: const Icon(Icons.person_pin_circle,
-                            color: Colors.white, size: 16),
-                      ),
-                    ),
-                  ...spotsAsync.when(
-                    data: (spots) => spots.map((s) {
-                      final kind = resolveSpotKind(s);
-                      final photoUrl =
-                          s.photos.isNotEmpty ? s.photos.first.url : null;
-                      return Marker(
-                        point: LatLng(s.lat, s.lng),
-                        width: kSpotMarkerWidth,
-                        height: kSpotMarkerHeight,
-                        alignment: Alignment.topCenter,
+                      point: LatLng(s.lat, s.lng),
+                      width: 44,
+                      height: 44,
+                      child: Semantics(
+                        button: true,
+                        label: s.name,
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () => _openSpotDetail(s),
-                          child: spotMarkerWidget(
-                            kind: kind,
-                            brightness: brightness,
-                            photoUrl: photoUrl,
-                            label: s.name,
-                            showLabel: showLabels,
+                          onTap: () => _select(s),
+                          child: SpotRhombusMarker(
+                            selected: s.id == _selectedId,
                           ),
                         ),
-                      );
-                    }).toList(),
-                    loading: () => const [],
-                    error: (_, _) => const [],
-                  ),
+                      ),
+                    ),
+                  if (selected != null)
+                    Marker(
+                      point: LatLng(selected.lat, selected.lng),
+                      width: 220,
+                      height: 60,
+                      alignment: Alignment.topCenter,
+                      child: IgnorePointer(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: _PopIn(
+                            key: ValueKey(selected.id),
+                            child: TapeLabel(
+                              selected.name,
+                              fontSize: 13,
+                              angleDegrees: -3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -234,194 +376,590 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             top: 0,
             left: 0,
             right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: _ExplorarHeader(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ExploraHeader(
+                  spotCount: spotsAsync.hasValue ? visible.length : null,
+                  searchCtrl: _searchCtrl,
+                  searchFocus: _searchFocus,
+                  onQueryChanged: (v) => setState(() => _query = v),
+                  onClearSearch: _clearSearch,
                   onFilterTap: _openFilters,
-                  filterCount: filter.types.length +
-                      filter.difficulties.length +
-                      (filter.minRating > 0 ? 1 : 0),
+                  secondaryFilterCount: secondaryFilters,
+                  selectedTypes: filter.types,
+                  onClearTypes: () =>
+                      ref.read(spotFilterProvider.notifier).state = filter
+                          .copyWith(types: const {}),
+                  onToggleType: (t) => _toggleType(filter, t),
+                  loading: spotsAsync.isLoading,
                 ),
-              ),
+                if (showResults)
+                  _SearchResults(
+                    results: visible.take(5).toList(),
+                    onPick: _pickSearchResult,
+                  ),
+                if (spotsAsync.hasError && !showResults)
+                  _Banner(
+                    text: 'No se pudieron cargar los spots',
+                    action: 'REINTENTAR',
+                    onAction: () => ref.invalidate(approvedSpotsProvider),
+                    error: true,
+                  ),
+                if (showEmpty && !showResults)
+                  _Banner(
+                    text: q.isNotEmpty
+                        ? 'Ningún spot se llama así'
+                        : 'Sin spots con estos filtros',
+                    action: 'LIMPIAR',
+                    onAction: () {
+                      _clearSearch();
+                      ref.read(spotFilterProvider.notifier).state =
+                          const SpotFilter();
+                    },
+                  ),
+              ],
             ),
           ),
           Positioned(
-            left: 12,
-            right: 12,
-            bottom: 96,
-            child: Center(
-              child: Wrap(
-                spacing: 8,
-                alignment: WrapAlignment.center,
-                children: activeChips,
-              ),
+            left: 16,
+            right: 16,
+            bottom: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const _OsmAttribution(),
+                    const Spacer(),
+                    _SquareButton(
+                      tooltip: _following
+                          ? 'Siguiendo tu ubicación'
+                          : 'Centrar en mi ubicación',
+                      onPressed: state.locating ? null : _onLocateTap,
+                      child: state.locating
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _following
+                                  ? Icons.my_location
+                                  : Icons.location_searching,
+                              size: 22,
+                              color: _following ? AppColors.tape : null,
+                            ),
+                    ),
+                  ],
+                ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.25),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: selected == null
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          key: ValueKey(selected.id),
+                          padding: const EdgeInsets.only(top: 12),
+                          child: _SpotCard(
+                            spot: selected,
+                            from: state.hasRealLocation
+                                ? state.currentLocation
+                                : null,
+                            onOpen: () => context.push(
+                              AppRoutes.spotDetail(selected!.id),
+                            ),
+                          ),
+                        ),
+                ),
+              ],
             ),
           ),
-          if (spotsAsync.hasError)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 76,
-              left: 16,
-              right: 16,
-              child: Material(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, size: 18),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text('No se pudieron cargar los spots'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExploraHeader extends StatelessWidget {
+  const _ExploraHeader({
+    required this.spotCount,
+    required this.searchCtrl,
+    required this.searchFocus,
+    required this.onQueryChanged,
+    required this.onClearSearch,
+    required this.onFilterTap,
+    required this.secondaryFilterCount,
+    required this.selectedTypes,
+    required this.onClearTypes,
+    required this.onToggleType,
+    required this.loading,
+  });
+
+  final int? spotCount;
+  final TextEditingController searchCtrl;
+  final FocusNode searchFocus;
+  final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClearSearch;
+  final VoidCallback onFilterTap;
+  final int secondaryFilterCount;
+  final Set<SpotType> selectedTypes;
+  final VoidCallback onClearTypes;
+  final ValueChanged<SpotType> onToggleType;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.asphalt,
+        border: Border(bottom: BorderSide(color: AppColors.line)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('EXPLORA', style: AppTheme.display(42)),
+                  const Spacer(),
+                  if (spotCount != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        spotCount == 1 ? '1 SPOT' : '$spotCount SPOTS',
+                        style: AppTheme.label(12, color: AppColors.boneMuted),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, size: 18),
-                        onPressed: () =>
-                            ref.invalidate(approvedSpotsProvider),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: searchCtrl,
+                      focusNode: searchFocus,
+                      onChanged: onQueryChanged,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Busca un spot…',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: searchCtrl.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Borrar búsqueda',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: onClearSearch,
+                              ),
                       ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
+                  Badge(
+                    isLabelVisible: secondaryFilterCount > 0,
+                    label: Text('$secondaryFilterCount'),
+                    backgroundColor: AppColors.bone,
+                    textColor: AppColors.asphalt,
+                    child: _SquareButton(
+                      tooltip: 'Filtros',
+                      filled: true,
+                      onPressed: onFilterTap,
+                      child: const Icon(Icons.tune, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 58,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                children: [
+                  UrbanChip(
+                    label: 'Todos',
+                    selected: selectedTypes.isEmpty,
+                    onTap: onClearTypes,
+                  ),
+                  for (final t in SpotType.values) ...[
+                    const SizedBox(width: 6),
+                    UrbanChip(
+                      label: t.label,
+                      selected: selectedTypes.contains(t),
+                      onTap: () => onToggleType(t),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 2,
+              child: loading ? const LinearProgressIndicator() : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchResults extends StatelessWidget {
+  const _SearchResults({required this.results, required this.onPick});
+
+  final List<Spot> results;
+  final ValueChanged<Spot> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    if (results.isEmpty) return const SizedBox.shrink();
+    return Material(
+      color: AppColors.concrete,
+      child: Column(
+        children: [
+          for (final s in results)
+            InkWell(
+              onTap: () => onPick(s),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.line)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.place_outlined,
+                      size: 18,
+                      color: AppColors.tape,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        s.name.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.display(18),
+                      ),
+                    ),
+                    Text(
+                      s.type.label.toUpperCase(),
+                      style: AppTheme.label(11, color: AppColors.boneMuted),
+                    ),
+                  ],
                 ),
               ),
             ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 88),
-        child: FloatingActionButton.small(
-          heroTag: 'recenter',
-          backgroundColor: theme.colorScheme.surface,
-          foregroundColor: theme.colorScheme.onSurface,
-          elevation: 4,
-          onPressed: state.locating ? null : _recenter,
-          child: state.locating
-              ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.my_location),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
-  }
-
-  Widget _activeBadge(
-    BuildContext context, {
-    required String label,
-    required VoidCallback onClear,
-  }) {
-    return InputChip(
-      label: Text(label),
-      onDeleted: onClear,
-      deleteIcon: const Icon(Icons.close, size: 16),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      elevation: 2,
     );
   }
 }
 
-class _ExplorarHeader extends StatelessWidget {
-  const _ExplorarHeader({
-    required this.onFilterTap,
-    required this.filterCount,
+class _Banner extends StatelessWidget {
+  const _Banner({
+    required this.text,
+    required this.action,
+    required this.onAction,
+    this.error = false,
   });
 
-  final VoidCallback onFilterTap;
-  final int filterCount;
+  final String text;
+  final String action;
+  final VoidCallback onAction;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: AppColors.concrete,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: error ? AppColors.danger : AppColors.lineStrong,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            error ? Icons.error_outline : Icons.search_off,
+            size: 18,
+            color: error ? AppColors.danger : AppColors.boneMuted,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+          TextButton(onPressed: onAction, child: Text(action)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpotCard extends ConsumerWidget {
+  const _SpotCard({
+    required this.spot,
+    required this.from,
+    required this.onOpen,
+  });
+
+  final Spot spot;
+  final LatLng? from;
+  final VoidCallback onOpen;
+
+  String? get _distance {
+    final origin = from;
+    if (origin == null) return null;
+    final meters = const Distance().as(
+      LengthUnit.Meter,
+      origin,
+      LatLng(spot.lat, spot.lng),
+    );
+    if (meters < 1000) return '${meters.round()} M';
+    return '${(meters / 1000).toStringAsFixed(1)} KM';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photo = spot.photos.isNotEmpty ? spot.photos.first.url : null;
+    final meta = [
+      spot.difficulty.label.toUpperCase(),
+      if (spot.ratingsCount > 0) '${spot.avgRating.toStringAsFixed(1)} ★',
+      ?_distance,
+    ].join(' · ');
+
     return Material(
-      color: theme.colorScheme.surface,
-      elevation: 2,
-      borderRadius: BorderRadius.circular(18),
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+      color: AppColors.concrete,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Explorar',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                ),
-                Material(
-                  color: theme.colorScheme.surface,
-                  shape: const CircleBorder(),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        tooltip: 'Filtros',
-                        icon: const Icon(Icons.tune_rounded),
-                        onPressed: onFilterTap,
-                      ),
-                      if (filterCount > 0)
-                        Positioned(
-                          right: 6,
-                          top: 6,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
-                  ),
-                ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            Expanded(
+              child: InkWell(
+                onTap: onOpen,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.search,
-                      size: 20,
-                      color: theme.colorScheme.onSurface
-                          .withValues(alpha: 0.5),
+                    SizedBox(
+                      width: 112,
+                      child: photo == null
+                          ? const ColoredBox(
+                              color: AppColors.concreteHigh,
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: AppColors.boneMuted,
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: photo,
+                              fit: BoxFit.cover,
+                              placeholder: (_, _) => const ColoredBox(
+                                color: AppColors.concreteHigh,
+                              ),
+                              errorWidget: (_, _, _) => const ColoredBox(
+                                color: AppColors.concreteHigh,
+                              ),
+                            ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Buscar spots',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.55),
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TapeLabel(spot.type.label, fontSize: 11),
+                            const SizedBox(height: 10),
+                            Text(
+                              spot.name.toUpperCase(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTheme.display(24),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              meta,
+                              style: AppTheme.label(
+                                11,
+                                color: AppColors.boneMuted,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                border: Border(left: BorderSide(color: AppColors.line)),
+              ),
+              child: IconButton(
+                tooltip: spot.isFavorited
+                    ? 'Quitar de favoritos'
+                    : 'Guardar en favoritos',
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final ok = await ref
+                      .read(socialViewModelProvider.notifier)
+                      .toggleFavorite(
+                        spotId: spot.id,
+                        currentlyFavorited: spot.isFavorited,
+                      );
+                  if (ok) return;
+                  messenger
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'No se pudo actualizar. Inténtalo de nuevo.',
+                        ),
+                      ),
+                    );
+                },
+                icon: Icon(
+                  spot.isFavorited ? Icons.bookmark : Icons.bookmark_border,
+                  color: spot.isFavorited ? AppColors.tape : AppColors.bone,
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SquareButton extends StatelessWidget {
+  const _SquareButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.child,
+    this.filled = false,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: filled ? AppColors.tape : AppColors.concrete,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: filled
+              ? BorderSide.none
+              : const BorderSide(color: AppColors.lineStrong, width: 1.5),
+        ),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(4),
+          child: SizedBox(
+            width: 50,
+            height: 50,
+            child: IconTheme(
+              data: IconThemeData(
+                color: filled ? AppColors.asphalt : AppColors.bone,
+              ),
+              child: Center(child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LatLngTween extends Tween<LatLng> {
+  _LatLngTween({super.begin, super.end});
+
+  @override
+  LatLng lerp(double t) => LatLng(
+        begin!.latitude + (end!.latitude - begin!.latitude) * t,
+        begin!.longitude + (end!.longitude - begin!.longitude) * t,
+      );
+}
+
+/// Grows [child] out of its bottom edge with a small overshoot, the
+/// same "pop" the selected rhombus does. Replays when the key changes.
+class _PopIn extends StatelessWidget {
+  const _PopIn({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    return child
+        .animate()
+        .fadeIn(duration: 140.ms)
+        .scale(
+          begin: const Offset(0.2, 0.2),
+          end: const Offset(1, 1),
+          alignment: Alignment.bottomCenter,
+          duration: 380.ms,
+          curve: Curves.easeOutBack,
+        );
+  }
+}
+
+/// OSM's tile policy asks for visible credit on the map.
+class _OsmAttribution extends StatelessWidget {
+  const _OsmAttribution();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.asphalt.withValues(alpha: 0.8),
+      borderRadius: BorderRadius.circular(3),
+      child: InkWell(
+        onTap: () => launchUrl(
+          Uri.parse('https://www.openstreetmap.org/copyright'),
+          mode: LaunchMode.externalApplication,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: Text(
+            '© OpenStreetMap',
+            style: AppTheme.label(10, color: AppColors.boneMuted),
+          ),
         ),
       ),
     );

@@ -1,196 +1,125 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:spot_for_fun/domain/enums.dart';
-import 'package:spot_for_fun/data/services/spot_service.dart';
 import 'package:spot_for_fun/data/repositories/spot_repository.dart';
+import 'package:spot_for_fun/data/services/spot_service.dart';
+import 'package:spot_for_fun/domain/enums.dart';
+import 'package:spot_for_fun/ui/core/theme/app_colors.dart';
+import 'package:spot_for_fun/ui/core/theme/app_theme.dart';
 import 'package:spot_for_fun/ui/shared/widgets/spot_marker.dart';
+import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
 
-class FiltersSheet extends ConsumerStatefulWidget {
+class FiltersSheet extends ConsumerWidget {
   const FiltersSheet({super.key});
 
-  @override
-  ConsumerState<FiltersSheet> createState() => _FiltersSheetState();
-}
-
-class _FiltersSheetState extends ConsumerState<FiltersSheet> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  Set<T> _toggled<T>(Set<T> current, T value) {
+    final next = <T>{...current};
+    if (!next.remove(value)) next.add(value);
+    return next;
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(spotFilterProvider);
     final notifier = ref.read(spotFilterProvider.notifier);
-    final theme = Theme.of(context);
-    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.85,
+      initialChildSize: 0.8,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
-      snap: true,
-      snapSizes: const [0.85],
       builder: (context, scrollController) {
-        final effectiveScroll = _scrollController.hasClients
-            ? _scrollController
-            : scrollController;
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 4),
+              child: Row(
+                children: [
+                  Text('FILTROS', style: AppTheme.display(30)),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Cerrar',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: Row(
-                  children: [
-                    Text(
-                      'Filtros',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      tooltip: 'Cerrar',
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              Flexible(
-                child: SingleChildScrollView(
-                  controller: effectiveScroll,
-                  padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + mediaQuery.viewInsets.bottom),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 24 + bottomInset),
+                children: [
+                  const _SectionLabel('Tipo de spot'),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 8,
                     children: [
-                      Text('Tipo de spot',
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: SpotType.values.map((t) {
-                          final selected = filter.types.contains(t);
-                          final kind = classifySpotKind(t.dbValue);
-                          return _TypeChip(
-                            label: t.label,
-                            icon: spotIconFor(kind),
-                            iconColor: spotColorFor(kind, theme.brightness),
-                            selected: selected,
-                            onTap: () {
-                              final next = <SpotType>{...filter.types};
-                              if (selected) {
-                                next.remove(t);
-                              } else {
-                                next.add(t);
-                              }
-                              notifier.state = filter.copyWith(types: next);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 20),
-                      Text('Dificultad',
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: SpotDifficulty.values.map((d) {
-                          final selected = filter.difficulties.contains(d);
-                          return _ChoiceChip(
-                            label: d.label,
-                            selected: selected,
-                            onTap: () {
-                              final next =
-                                  <SpotDifficulty>{...filter.difficulties};
-                              if (selected) {
-                                next.remove(d);
-                              } else {
-                                next.add(d);
-                              }
-                              notifier.state =
-                                  filter.copyWith(difficulties: next);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 20),
-                      Text('Mejor horario',
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: BestTimeSlot.values.map((slot) {
-                          final selected = filter.bestTime.contains(slot);
-                          return _TypeChip(
-                            label: slot.label,
-                            icon: _iconForSlot(slot),
-                            iconColor: theme.colorScheme.onSurface,
-                            selected: selected,
-                            onTap: () {
-                              final next =
-                                  <BestTimeSlot>{...filter.bestTime};
-                              if (selected) {
-                                next.remove(slot);
-                              } else {
-                                next.add(slot);
-                              }
-                              notifier.state =
-                                  filter.copyWith(bestTime: next);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () =>
-                                  notifier.state = const SpotFilter(),
-                              child: const Text('Limpiar'),
-                            ),
+                      for (final t in SpotType.values)
+                        UrbanChip(
+                          label: t.label,
+                          icon: spotIconFor(classifySpotKind(t.dbValue)),
+                          selected: filter.types.contains(t),
+                          onTap: () => notifier.state = filter.copyWith(
+                            types: _toggled(filter.types, t),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Aplicar'),
-                            ),
+                        ),
+                    ],
+                  ),
+                  const _SectionLabel('Nivel'),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 8,
+                    children: [
+                      for (final d in SpotDifficulty.values)
+                        UrbanChip(
+                          label: d.label,
+                          selected: filter.difficulties.contains(d),
+                          onTap: () => notifier.state = filter.copyWith(
+                            difficulties: _toggled(filter.difficulties, d),
                           ),
-                        ],
+                        ),
+                    ],
+                  ),
+                  const _SectionLabel('Mejor hora'),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 8,
+                    children: [
+                      for (final slot in BestTimeSlot.values)
+                        UrbanChip(
+                          label: slot.label,
+                          icon: _iconForSlot(slot),
+                          selected: filter.bestTime.contains(slot),
+                          onTap: () => notifier.state = filter.copyWith(
+                            bestTime: _toggled(filter.bestTime, slot),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => notifier.state = const SpotFilter(),
+                          child: const Text('LIMPIAR'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('APLICAR'),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -207,106 +136,17 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
   }
 }
 
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({
-    required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color iconColor;
-  final bool selected;
-  final VoidCallback onTap;
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bg = selected
-        ? theme.colorScheme.primary
-        : theme.colorScheme.surfaceContainer;
-    final fg = selected
-        ? theme.colorScheme.onPrimary
-        : theme.colorScheme.onSurface;
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: selected ? fg : iconColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: fg,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurface,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 10),
+      child: Text(
+        text.toUpperCase(),
+        style: AppTheme.label(12, color: AppColors.boneMuted),
       ),
     );
   }

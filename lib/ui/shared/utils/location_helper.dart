@@ -13,8 +13,10 @@ enum LocationStatus {
 class LocationHelper {
   LocationHelper._();
 
-  static const LatLng neutralCenter = LatLng(0, 0);
-  static const double neutralZoom = 2;
+  /// Where the map opens without a GPS fix: Mexico City, the app's home
+  /// scene (was 0,0 — the middle of the ocean).
+  static const LatLng neutralCenter = LatLng(19.4326, -99.1332);
+  static const double neutralZoom = 11;
 
   static Future<LocationStatus> ensurePermission() async {
     try {
@@ -57,6 +59,18 @@ class LocationHelper {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Continuous fixes while the app is in the foreground. A new fix
+  /// arrives after moving [distanceFilterMeters]; the caller cancels the
+  /// subscription to stop the GPS.
+  static Stream<Position> positionStream({int distanceFilterMeters = 8}) {
+    return Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: distanceFilterMeters,
+      ),
+    );
   }
 
   static Future<LatLng> currentLatLng({

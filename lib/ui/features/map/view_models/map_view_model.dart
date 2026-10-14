@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'package:spot_for_fun/ui/shared/utils/location_helper.dart';
@@ -36,8 +39,37 @@ class MapViewState {
 }
 
 class MapViewModel extends Notifier<MapViewState> {
+  StreamSubscription<Position>? _tracking;
+
   @override
-  MapViewState build() => const MapViewState.initial();
+  MapViewState build() {
+    ref.onDispose(() => _tracking?.cancel());
+    return const MapViewState.initial();
+  }
+
+  bool get isTracking => _tracking != null;
+
+  /// Follows the GPS while the map is on screen. Only call after a
+  /// [LocationStatus.granted]; errors (GPS switched off, permission
+  /// revoked) stop tracking and keep the last known position.
+  void startTracking() {
+    if (_tracking != null) return;
+    _tracking = LocationHelper.positionStream().listen(
+      (pos) => state = state.copyWith(
+        currentLocation: LatLng(pos.latitude, pos.longitude),
+        hasRealLocation: true,
+      ),
+      onError: (Object e) {
+        debugPrint('[MapViewModel] tracking stopped: $e');
+        stopTracking();
+      },
+    );
+  }
+
+  void stopTracking() {
+    _tracking?.cancel();
+    _tracking = null;
+  }
 
   Future<LocationStatus> bootstrapLocation() async {
     if (state.bootstrapped) return LocationStatus.granted;
@@ -73,5 +105,6 @@ class MapViewModel extends Notifier<MapViewState> {
   }
 }
 
-final mapViewModelProvider =
-    NotifierProvider<MapViewModel, MapViewState>(MapViewModel.new);
+final mapViewModelProvider = NotifierProvider<MapViewModel, MapViewState>(
+  MapViewModel.new,
+);
