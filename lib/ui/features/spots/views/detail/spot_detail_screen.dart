@@ -28,24 +28,20 @@ import 'package:spot_for_fun/ui/shared/widgets/tape_label.dart';
 import 'package:spot_for_fun/ui/shared/widgets/urban_chip.dart';
 import 'package:spot_for_fun/ui/shared/widgets/user_avatar.dart';
 
-final spotByIdProvider =
-    FutureProvider.family.autoDispose<Spot, String>((ref, id) async {
-  final repo = ref.watch(spotRepositoryProvider);
-  final likedIds = await ref.watch(myLikedSpotIdsProvider.future);
-  final favoritedIds =
-      await ref.watch(myFavoritedSpotIdsProvider.future);
-  return repo.fetchById(
-    id,
-    likedIds: likedIds,
-    favoritedIds: favoritedIds,
-  );
+/// Fresh copy of the spot from the server. Doesn't depend on favorites:
+/// toggling one must not download the spot again.
+final spotByIdProvider = FutureProvider.family.autoDispose<Spot, String>((
+  ref,
+  id,
+) {
+  return ref.watch(spotRepositoryProvider).fetchById(id);
 });
 
 final visibleRatingsProvider = FutureProvider.family
     .autoDispose<List<SpotRating>, String>((ref, spotId) async {
-  final repo = ref.watch(spotRatingRepositoryProvider);
-  return repo.fetchVisibleForSpot(spotId);
-});
+      final repo = ref.watch(spotRatingRepositoryProvider);
+      return repo.fetchVisibleForSpot(spotId);
+    });
 
 class SpotDetailScreen extends ConsumerWidget {
   const SpotDetailScreen({super.key, required this.spotId});
@@ -55,34 +51,49 @@ class SpotDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncSpot = ref.watch(spotByIdProvider(spotId));
+    // The map's copy, if it has one: the screen opens with it instantly
+    // (and offline) while the fresh copy loads.
+    final cached = ref.watch(
+      spotCatalogProvider.select((catalog) {
+        for (final s in catalog.spots) {
+          if (s.id == spotId) return s;
+        }
+        return null;
+      }),
+    );
+    // "Not found" means it's gone or no longer visible: don't keep
+    // showing the stale copy then.
+    final spot = asyncSpot.error is StateError
+        ? null
+        : asyncSpot.valueOrNull ?? cached;
 
     return Scaffold(
-      // Favorite toggles invalidate the providers this depends on; keep
-      // showing the current spot while it reloads instead of a spinner.
-      body: asyncSpot.when(
-        skipLoadingOnReload: true,
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline,
-                    size: 44, color: AppColors.danger),
-                const SizedBox(height: 12),
-                Text('NO SE PUDO CARGAR', style: AppTheme.display(26)),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () => ref.invalidate(spotByIdProvider(spotId)),
-                  child: const Text('REINTENTAR'),
+      body: spot != null
+          ? _DetailBody(spot: spot)
+          : asyncSpot.hasError
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 44,
+                      color: AppColors.danger,
+                    ),
+                    const SizedBox(height: 12),
+                    Text('NO SE PUDO CARGAR', style: AppTheme.display(26)),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      onPressed: () => ref.invalidate(spotByIdProvider(spotId)),
+                      child: const Text('REINTENTAR'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ),
-        data: (spot) => _DetailBody(spot: spot),
-      ),
+              ),
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -97,7 +108,19 @@ class _DetailBody extends ConsumerWidget {
     // Photos are fetched separately so Supabase applies the
     // spot_photos RLS (the embedded select in fetchById doesn't).
     final photosAsync = ref.watch(spotPhotosVisibleProvider(spot.id));
-    final photos = photosAsync.valueOrNull ?? const <SpotPhoto>[];
+    // Until they arrive, the cover (already cached by the map card).
+    final photos =
+        photosAsync.valueOrNull ??
+        [
+          if (spot.coverUrl != null)
+            SpotPhoto(
+              id: 'cover',
+              spotId: spot.id,
+              url: spot.coverUrl!,
+              position: 0,
+              photoStatus: PhotoStatus.approved,
+            ),
+        ];
     final isOwner = ref.watch(currentUserIdProvider) == spot.authorId;
     final hasSafety =
         spot.safetyNotes != null && spot.safetyNotes!.trim().isNotEmpty;
@@ -294,11 +317,13 @@ class _DetailBody extends ConsumerWidget {
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Mira este spot en Spot4Fun: ${spot.name} '
+        text:
+            'Mira este spot en Spot4Fun: ${spot.name} '
             '(${spot.type.label} · ${spot.difficulty.label})\n$link',
         subject: spot.name,
-        sharePositionOrigin:
-            box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
       ),
     );
   }
@@ -524,9 +549,7 @@ class _ReportSheetState extends State<_ReportSheet> {
           TextField(
             controller: _detailsCtrl,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Detalles (opcional)',
-            ),
+            decoration: const InputDecoration(labelText: 'Detalles (opcional)'),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -553,7 +576,9 @@ class _ReportSheetState extends State<_ReportSheet> {
     if (cat == null) return;
     final details = _detailsCtrl.text.trim();
     final reason = details.isEmpty ? cat.label : '${cat.label}: $details';
-    final repo = ProviderScope.containerOf(context).read(spotRepositoryProvider);
+    final repo = ProviderScope.containerOf(
+      context,
+    ).read(spotRepositoryProvider);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(widget.parentContext);
     setState(() {
@@ -627,7 +652,9 @@ class _StatsRow extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Expanded(child: _StatBox(value: thirdValue, label: thirdLabel)),
+        Expanded(
+          child: _StatBox(value: thirdValue, label: thirdLabel),
+        ),
       ],
     );
   }
@@ -682,7 +709,9 @@ class _FavoriteButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final saved = spot.isFavorited;
+    final saved =
+        ref.watch(myFavoritedSpotIdsProvider).valueOrNull?.contains(spot.id) ??
+        spot.isFavorited;
     return Tooltip(
       message: saved ? 'Quitar de favoritos' : 'Guardar en favoritos',
       child: Material(
@@ -695,10 +724,9 @@ class _FavoriteButton extends ConsumerWidget {
           borderRadius: BorderRadius.circular(4),
           onTap: () => _reportSocialResult(
             ScaffoldMessenger.of(context),
-            ref.read(socialViewModelProvider.notifier).toggleFavorite(
-                  spotId: spot.id,
-                  currentlyFavorited: saved,
-                ),
+            ref
+                .read(socialViewModelProvider.notifier)
+                .toggleFavorite(spotId: spot.id, currentlyFavorited: saved),
           ),
           child: SizedBox(
             width: 52,
@@ -842,18 +870,23 @@ class _RatingCta extends ConsumerStatefulWidget {
 }
 
 class _RatingCtaState extends ConsumerState<_RatingCta> {
+  // The view model family is keyed by the Spot instance, and the screen
+  // swaps the cached copy for the fresh one; stick to the first so the
+  // review state isn't loaded twice (or left unloaded).
+  late final Spot _spot = widget.spot;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(writeRatingViewModelProvider(widget.spot).notifier).hydrate();
+      ref.read(writeRatingViewModelProvider(_spot).notifier).hydrate();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final spot = widget.spot;
+    final spot = _spot;
     final uid = ref.watch(currentUserIdProvider);
     if (uid == null) return const SizedBox.shrink();
     final state = ref.watch(writeRatingViewModelProvider(spot));
@@ -913,9 +946,7 @@ class _RatingCtaState extends ConsumerState<_RatingCta> {
           icon: Icon(icon),
           label: Text(label),
           style: locked
-              ? OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.boneMuted,
-                )
+              ? OutlinedButton.styleFrom(foregroundColor: AppColors.boneMuted)
               : null,
         ),
         const SizedBox(height: 6),
@@ -1054,13 +1085,11 @@ class _RatingCard extends StatelessWidget {
                         _Stars(value: rating.rating),
                         const SizedBox(width: 8),
                         Text(
-                          DateFormat('d MMM y', 'es')
-                              .format(rating.createdAt)
-                              .toUpperCase(),
-                          style: AppTheme.label(
-                            10,
-                            color: AppColors.boneMuted,
-                          ),
+                          DateFormat(
+                            'd MMM y',
+                            'es',
+                          ).format(rating.createdAt).toUpperCase(),
+                          style: AppTheme.label(10, color: AppColors.boneMuted),
                         ),
                       ],
                     ),

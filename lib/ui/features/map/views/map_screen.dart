@@ -793,6 +793,9 @@ class _SpotCard extends ConsumerWidget {
   final LatLng? from;
   final VoidCallback onOpen;
 
+  /// Every card is this tall, whether the name takes one line or two.
+  static const _height = 144.0;
+
   String? get _distance {
     final origin = from;
     if (origin == null) return null;
@@ -821,102 +824,110 @@ class _SpotCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
         side: const BorderSide(color: AppColors.line),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: onOpen,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: 112,
-                      child: photo == null
-                          ? const ColoredBox(
-                              color: AppColors.concreteHigh,
-                              child: Icon(
-                                Icons.image_not_supported_outlined,
-                                color: AppColors.boneMuted,
-                              ),
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: photo,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) => const ColoredBox(
+      // Text scaling is capped so the content always fits the fixed height.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.15,
+        child: SizedBox(
+          height: _height,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: onOpen,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: 112,
+                        child: photo == null
+                            ? const ColoredBox(
                                 color: AppColors.concreteHigh,
+                                child: Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: AppColors.boneMuted,
+                                ),
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: photo,
+                                fit: BoxFit.cover,
+                                placeholder: (_, _) => const ColoredBox(
+                                  color: AppColors.concreteHigh,
+                                ),
+                                errorWidget: (_, _, _) => const ColoredBox(
+                                  color: AppColors.concreteHigh,
+                                ),
                               ),
-                              errorWidget: (_, _, _) => const ColoredBox(
-                                color: AppColors.concreteHigh,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              TapeLabel(spot.type.label, fontSize: 11),
+                              const SizedBox(height: 10),
+                              Text(
+                                spot.name.toUpperCase(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.display(24),
                               ),
-                            ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TapeLabel(spot.type.label, fontSize: 11),
-                            const SizedBox(height: 10),
-                            Text(
-                              spot.name.toUpperCase(),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTheme.display(24),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              meta,
-                              style: AppTheme.label(
-                                11,
-                                color: AppColors.boneMuted,
+                              // Short names leave the gap here, so the meta
+                              // line always sits at the bottom.
+                              const Spacer(),
+                              Text(
+                                meta,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.label(
+                                  11,
+                                  color: AppColors.boneMuted,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                border: Border(left: BorderSide(color: AppColors.line)),
-              ),
-              child: IconButton(
-                tooltip: spot.isFavorited
-                    ? 'Quitar de favoritos'
-                    : 'Guardar en favoritos',
-                onPressed: () async {
-                  final messenger = ScaffoldMessenger.of(context);
-                  final ok = await ref
-                      .read(socialViewModelProvider.notifier)
-                      .toggleFavorite(
-                        spotId: spot.id,
-                        currentlyFavorited: spot.isFavorited,
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  border: Border(left: BorderSide(color: AppColors.line)),
+                ),
+                child: IconButton(
+                  tooltip: spot.isFavorited
+                      ? 'Quitar de favoritos'
+                      : 'Guardar en favoritos',
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await ref
+                        .read(socialViewModelProvider.notifier)
+                        .toggleFavorite(
+                          spotId: spot.id,
+                          currentlyFavorited: spot.isFavorited,
+                        );
+                    if (ok) return;
+                    messenger
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'No se pudo actualizar. Inténtalo de nuevo.',
+                          ),
+                        ),
                       );
-                  if (ok) return;
-                  messenger
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'No se pudo actualizar. Inténtalo de nuevo.',
-                        ),
-                      ),
-                    );
-                },
-                icon: Icon(
-                  spot.isFavorited ? Icons.bookmark : Icons.bookmark_border,
-                  color: spot.isFavorited ? AppColors.tape : AppColors.bone,
+                  },
+                  icon: Icon(
+                    spot.isFavorited ? Icons.bookmark : Icons.bookmark_border,
+                    color: spot.isFavorited ? AppColors.tape : AppColors.bone,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

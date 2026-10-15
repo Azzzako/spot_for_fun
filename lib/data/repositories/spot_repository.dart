@@ -45,18 +45,11 @@ class SpotRepository {
     ];
   }
 
-  Future<Spot> fetchById(
-    String spotId, {
-    Set<String> likedIds = const {},
-    Set<String> favoritedIds = const {},
-  }) async {
+  /// The spot row only; its photos come from [fetchVisiblePhotos] and
+  /// the favorite flag from myFavoritedSpotIdsProvider.
+  Future<Spot> fetchById(String spotId) async {
     final dto = await _service.fetchById(spotId);
-    final photos = await fetchVisiblePhotos(spotId);
-    return dto.toDomain().copyWith(
-      photos: photos,
-      isLiked: likedIds.contains(spotId),
-      isFavorited: favoritedIds.contains(spotId),
-    );
+    return dto.toDomain();
   }
 
   Future<List<SpotPhoto>> fetchPhotos(String spotId) async {
@@ -75,35 +68,28 @@ class SpotRepository {
   /// approved rows (Supabase's policy on this table wasn't being
   /// applied reliably from PostgREST).
   Future<List<SpotPhoto>> fetchVisiblePhotos(String spotId) async {
-    final approvedRes = await _client
-        .from('spot_photos')
-        .select()
-        .eq('spot_id', spotId)
-        .eq('photo_status', PhotoStatus.approved.dbValue)
-        .order('position');
-    final approved = (approvedRes as List)
-        .cast<Map<String, dynamic>>()
-        .map(SpotPhotoDto.fromMap)
-        .map((d) => d.toDomain())
-        .toList();
-
+    final approved = PhotoStatus.approved.dbValue;
+    final pending = PhotoStatus.pending.dbValue;
     final uid = _client.auth.currentUser?.id;
-    if (uid == null) return approved;
-
-    final ownPendingRes = await _client
-        .from('spot_photos')
-        .select()
-        .eq('spot_id', spotId)
-        .eq('photo_status', PhotoStatus.pending.dbValue)
-        .eq('user_id', uid)
-        .order('position');
-    final ownPending = (ownPendingRes as List)
+    final query = _client.from('spot_photos').select().eq('spot_id', spotId);
+    final res =
+        await (uid == null
+                ? query.eq('photo_status', approved)
+                : query.or(
+                    'photo_status.eq.$approved,'
+                    'and(photo_status.eq.$pending,user_id.eq.$uid)',
+                  ))
+            .order('position');
+    final photos = (res as List)
         .cast<Map<String, dynamic>>()
         .map(SpotPhotoDto.fromMap)
         .map((d) => d.toDomain())
         .toList();
-
-    return [...approved, ...ownPending];
+    // Approved first, then the user's own pending ones, each by position.
+    return [
+      ...photos.where((p) => p.photoStatus == PhotoStatus.approved),
+      ...photos.where((p) => p.photoStatus != PhotoStatus.approved),
+    ];
   }
 
   /// Hydrates Spot cards from a list of favorited spot ids. Photos
