@@ -41,7 +41,6 @@ class SocialViewModel extends Notifier<void> {
   void _invalidateSpotLists() {
     ref.invalidate(myLikedSpotIdsProvider);
     ref.invalidate(myFavoritedSpotIdsProvider);
-    ref.invalidate(approvedSpotsProvider);
     ref.invalidate(mySpotsProvider);
     ref.invalidate(myFavoriteSpotsProvider);
   }

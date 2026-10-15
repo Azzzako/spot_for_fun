@@ -469,7 +469,7 @@ class _SpotTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final photo = spot.photos.isNotEmpty ? spot.photos.first.url : null;
+    final photo = spot.thumbUrl;
     final (Color statusColor, Color statusText) = switch (spot.status) {
       SpotStatus.approved => (AppColors.moss, AppColors.asphalt),
       SpotStatus.pending => (AppColors.tape, AppColors.asphalt),

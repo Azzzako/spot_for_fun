@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -46,6 +49,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _inForeground = true;
   bool _following = false;
 
+  // Spots load by area: what the map shows plus a margin, so small pans
+  // and walking in follow mode are served from what's already loaded.
+  static const _maxAreaM = 500000.0;
+  static const _minFetchM = 1500.0;
+  static const _distance = Distance();
+  MapCamera? _camera;
+  Timer? _areaDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +65,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       onShow: () {
         setState(() => _inForeground = true);
         _syncTracking();
+        // Refreshes the current area if it went stale while away.
+        _loadArea();
       },
       onHide: () {
         setState(() => _inForeground = false);
@@ -76,8 +89,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  void _onCameraChanged(MapCamera camera) {
+    setState(() => _camera = camera);
+    _areaDebounce?.cancel();
+    _areaDebounce = Timer(const Duration(milliseconds: 350), _loadArea);
+  }
+
+  /// Asks for the circle around the screen (centre to corner); it's
+  /// downloaded twice as big (at least [_minFetchM]) to leave a margin.
+  void _loadArea({bool force = false}) {
+    final camera = _camera;
+    if (camera == null) return;
+    final needM = math.min(
+      _distance.as(
+        LengthUnit.Meter,
+        camera.center,
+        camera.visibleBounds.northEast,
+      ),
+      _maxAreaM,
+    );
+    ref
+        .read(spotCatalogProvider.notifier)
+        .ensureArea(
+          camera.center.latitude,
+          camera.center.longitude,
+          needM: needM,
+          fetchM: math.min(math.max(needM * 2, _minFetchM), _maxAreaM),
+          force: force,
+        );
+  }
+
   @override
   void dispose() {
+    _areaDebounce?.cancel();
     _lifecycle.dispose();
     _mapVm.stopTracking();
     _searchCtrl.dispose();
@@ -100,7 +144,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _locationGranted = true;
       _syncTracking();
       final loc = ref.read(mapViewModelProvider).currentLocation;
-      if (loc != null) _mapController.move(loc, 15);
+      if (loc != null) _mapController.move(loc, 17);
     }
     _showSnackForStatus(status);
   }
@@ -118,7 +162,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   double get _followZoom {
     final zoom = _mapController.camera.zoom;
-    return zoom < 16 ? 16 : zoom;
+    return zoom < 17 ? 17 : zoom;
   }
 
   Future<void> _recenter() async {
@@ -212,32 +256,42 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      mapViewModelProvider.select((s) => s.currentLocation),
-      (_, next) {
-        if (_following && next != null) {
-          _mapController.move(next, _mapController.camera.zoom);
-        }
-      },
-    );
+    ref.listen(mapViewModelProvider.select((s) => s.currentLocation), (
+      _,
+      next,
+    ) {
+      if (_following && next != null) {
+        _mapController.move(next, _mapController.camera.zoom);
+      }
+    });
     final state = ref.watch(mapViewModelProvider);
-    final spotsAsync = ref.watch(approvedSpotsProvider);
+    final catalog = ref.watch(spotCatalogProvider);
+    final spots = ref.watch(approvedSpotsProvider);
     final filter = ref.watch(spotFilterProvider);
 
-    final spots = spotsAsync.valueOrNull ?? const <Spot>[];
     final q = _query.trim().toLowerCase();
     final visible = q.isEmpty
         ? spots
         : spots.where((s) => s.name.toLowerCase().contains(q)).toList();
+    // The header count and "nothing here" only look at what's on screen.
+    final bounds = _camera?.visibleBounds;
+    final inView = bounds == null
+        ? null
+        : visible.where((s) => bounds.contains(LatLng(s.lat, s.lng))).length;
+    final settled = catalog.ready && !catalog.loading && inView != null;
     Spot? selected;
     for (final s in visible) {
       if (s.id == _selectedId) selected = s;
     }
     final showResults = _searchFocus.hasFocus && q.isNotEmpty;
     final showEmpty =
-        spotsAsync.hasValue &&
-        visible.isEmpty &&
-        (q.isNotEmpty || !filter.isEmpty);
+        settled && visible.isEmpty && (q.isNotEmpty || !filter.isEmpty);
+    final showNoneHere =
+        settled &&
+        !catalog.failed &&
+        inView == 0 &&
+        q.isEmpty &&
+        filter.isEmpty;
     final secondaryFilters =
         filter.difficulties.length +
         filter.bestTime.length +
@@ -256,16 +310,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
               initialCenter:
                   state.currentLocation ?? LocationHelper.neutralCenter,
+              // Close enough to read the streets.
               initialZoom: state.currentLocation != null
-                  ? 15
+                  ? 17
                   : LocationHelper.neutralZoom,
               minZoom: 3,
               maxZoom: 19,
               backgroundColor: AppColors.asphalt,
-              onPositionChanged: (_, hasGesture) {
-                if (hasGesture && _following) {
-                  setState(() => _following = false);
-                }
+              onMapReady: () => _onCameraChanged(_mapController.camera),
+              onPositionChanged: (camera, hasGesture) {
+                if (hasGesture && _following) _following = false;
+                _onCameraChanged(camera);
               },
               onTap: (_, _) {
                 _searchFocus.unfocus();
@@ -290,9 +345,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         width: UserLocationDot.size,
                         height: UserLocationDot.size,
                         child: UserLocationDot(
-                          showHeading: _locationGranted &&
-                              _onScreen &&
-                              _inForeground,
+                          showHeading:
+                              _locationGranted && _onScreen && _inForeground,
                         ),
                       ),
                     ],
@@ -349,7 +403,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _ExploraHeader(
-                  spotCount: spotsAsync.hasValue ? visible.length : null,
+                  spotCount: catalog.ready ? inView : null,
                   searchCtrl: _searchCtrl,
                   searchFocus: _searchFocus,
                   onQueryChanged: (v) => setState(() => _query = v),
@@ -361,19 +415,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       ref.read(spotFilterProvider.notifier).state = filter
                           .copyWith(types: const {}),
                   onToggleType: (t) => _toggleType(filter, t),
-                  loading: spotsAsync.isLoading,
+                  loading: catalog.loading,
                 ),
                 if (showResults)
                   _SearchResults(
                     results: visible.take(5).toList(),
                     onPick: _pickSearchResult,
                   ),
-                if (spotsAsync.hasError && !showResults)
+                if (catalog.failed && inView == 0 && !showResults)
                   _Banner(
                     text: 'No se pudieron cargar los spots',
                     action: 'REINTENTAR',
-                    onAction: () => ref.invalidate(approvedSpotsProvider),
+                    onAction: () => _loadArea(force: true),
                     error: true,
+                  ),
+                if (showNoneHere && !showResults)
+                  _Banner(
+                    text: 'Sin spots en esta zona',
+                    action: 'ALEJAR',
+                    onAction: () {
+                      final c = _mapController.camera;
+                      _mapController.move(c.center, c.zoom - 1.5);
+                    },
                   ),
                 if (showEmpty && !showResults)
                   _Banner(
@@ -478,6 +541,7 @@ class _ExploraHeader extends StatelessWidget {
     required this.loading,
   });
 
+  /// Spots on screen right now.
   final int? spotCount;
   final TextEditingController searchCtrl;
   final FocusNode searchFocus;
@@ -716,7 +780,7 @@ class _SpotCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final photo = spot.photos.isNotEmpty ? spot.photos.first.url : null;
+    final photo = spot.thumbUrl;
     final meta = [
       spot.difficulty.label.toUpperCase(),
       if (spot.ratingsCount > 0) '${spot.avgRating.toStringAsFixed(1)} ★',
@@ -881,9 +945,9 @@ class _LatLngTween extends Tween<LatLng> {
 
   @override
   LatLng lerp(double t) => LatLng(
-        begin!.latitude + (end!.latitude - begin!.latitude) * t,
-        begin!.longitude + (end!.longitude - begin!.longitude) * t,
-      );
+    begin!.latitude + (end!.latitude - begin!.latitude) * t,
+    begin!.longitude + (end!.longitude - begin!.longitude) * t,
+  );
 }
 
 /// Grows [child] out of its bottom edge with a small overshoot, the

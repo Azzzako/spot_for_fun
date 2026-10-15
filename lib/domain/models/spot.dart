@@ -26,6 +26,7 @@ class Spot {
     this.photos = const [],
     this.authorDisplayName,
     this.authorAvatarUrl,
+    this.coverUrl,
     this.isLiked = false,
     this.isFavorited = false,
   });
@@ -54,6 +55,12 @@ class Spot {
   final List<SpotPhoto> photos;
   final String? authorDisplayName;
   final String? authorAvatarUrl;
+
+  /// Cover photo for cards and the map (first approved photo).
+  final String? coverUrl;
+
+  /// What list cards show: the cover, else the first loaded photo.
+  String? get thumbUrl => coverUrl ?? (photos.isEmpty ? null : photos.first.url);
 
   /// True when the current user has liked this spot. Set by the
   /// repository when the spot list is hydrated; falls back to false
@@ -95,6 +102,7 @@ class Spot {
     List<SpotPhoto>? photos,
     String? authorDisplayName,
     String? authorAvatarUrl,
+    String? coverUrl,
     bool? isLiked,
     bool? isFavorited,
     bool clearMarkerKind = false,
@@ -124,6 +132,7 @@ class Spot {
       photos: photos ?? this.photos,
       authorDisplayName: authorDisplayName ?? this.authorDisplayName,
       authorAvatarUrl: authorAvatarUrl ?? this.authorAvatarUrl,
+      coverUrl: coverUrl ?? this.coverUrl,
       isLiked: isLiked ?? this.isLiked,
       isFavorited: isFavorited ?? this.isFavorited,
     );

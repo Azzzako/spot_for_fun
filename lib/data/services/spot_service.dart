@@ -47,42 +47,22 @@ class SpotService {
   SpotService(this._client);
   final SupabaseClient _client;
 
-  Future<List<SpotDto>> fetchApproved({
-    SpotFilter filter = const SpotFilter(),
+  /// Approved spots inside a circle (nearest first, max 500), as the raw
+  /// rows PostgREST returns so the caller can cache them as-is. Parse
+  /// each with [parseSpotRow]. Backed by spots_in_radius (0025).
+  Future<List<Map<String, dynamic>>> fetchInRadiusRaw({
+    required double lat,
+    required double lng,
+    required double radiusMeters,
   }) async {
-    var query = _client
-        .from('spots')
-        .select('*, $_authorSelect')
-        .eq('status', 'approved');
-
-    if (filter.types.isNotEmpty) {
-      query = query.inFilter(
-        'type',
-        filter.types.map((e) => e.dbValue).toList(),
-      );
-    }
-    if (filter.difficulties.isNotEmpty) {
-      query = query.inFilter(
-        'difficulty',
-        filter.difficulties.map((e) => e.dbValue).toList(),
-      );
-    }
-    if (filter.bestTime.isNotEmpty) {
-      query = query.overlaps(
-        'best_time',
-        filter.bestTime.map((e) => e.dbValue).toList(),
-      );
-    }
-    if (filter.minRating > 0) {
-      query = query.gte('avg_rating', filter.minRating);
-    }
-
-    final res = await query.order('avg_rating', ascending: false);
-    return (res as List)
-        .cast<Map<String, dynamic>>()
-        .map(_spotDtoFromRow)
-        .toList(growable: false);
+    final res = await _client.rpc(
+      'spots_in_radius',
+      params: {'p_lat': lat, 'p_lng': lng, 'p_radius_m': radiusMeters},
+    ).select('*, $_authorSelect');
+    return (res as List).cast<Map<String, dynamic>>();
   }
+
+  SpotDto parseSpotRow(Map<String, dynamic> row) => _spotDtoFromRow(row);
 
   Future<SpotDto> fetchById(String spotId) async {
     final res = await _client
@@ -336,6 +316,7 @@ class SpotService {
       photos: photos,
       authorDisplayName: _resolveAuthorDisplayName(map['author']),
       authorAvatarUrl: _resolveAuthorAvatar(map['author']),
+      coverUrl: base.coverUrl,
     );
   }
 

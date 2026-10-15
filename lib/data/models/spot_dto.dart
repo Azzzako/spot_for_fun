@@ -27,6 +27,7 @@ class SpotDto {
     this.photos = const [],
     this.authorDisplayName,
     this.authorAvatarUrl,
+    this.coverUrl,
   });
 
   final String id;
@@ -54,6 +55,9 @@ class SpotDto {
   final List<SpotPhotoDto> photos;
   final String? authorDisplayName;
   final String? authorAvatarUrl;
+
+  /// First approved spot photo, kept by the database (0025).
+  final String? coverUrl;
 
   factory SpotDto.fromMap(Map<String, dynamic> map) {
     return SpotDto(
@@ -88,6 +92,7 @@ class SpotDto {
       photos: const [],
       authorDisplayName: null,
       authorAvatarUrl: null,
+      coverUrl: map['cover_url'] as String?,
     );
   }
 }
