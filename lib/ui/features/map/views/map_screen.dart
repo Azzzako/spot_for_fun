@@ -32,7 +32,8 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen>
+    with SingleTickerProviderStateMixin {
   final _mapController = MapController();
   final _searchCtrl = TextEditingController();
   final _searchFocus = FocusNode();
@@ -57,10 +58,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   MapCamera? _camera;
   Timer? _areaDebounce;
 
+  // Drives the locate button's glide back to the user.
+  late final AnimationController _flight;
+
   @override
   void initState() {
     super.initState();
     _mapVm = ref.read(mapViewModelProvider.notifier);
+    _flight = AnimationController(vsync: this);
     _lifecycle = AppLifecycleListener(
       onShow: () {
         setState(() => _inForeground = true);
@@ -122,6 +127,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _areaDebounce?.cancel();
+    _flight.dispose();
     _lifecycle.dispose();
     _mapVm.stopTracking();
     _searchCtrl.dispose();
@@ -154,7 +160,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final known = ref.read(mapViewModelProvider).currentLocation;
     if (_mapVm.isTracking && known != null) {
       setState(() => _following = true);
-      _mapController.move(known, _followZoom);
+      _flyTo(known, _followZoom);
       return;
     }
     await _recenter();
@@ -174,10 +180,42 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final loc = ref.read(mapViewModelProvider).currentLocation;
       if (loc != null) {
         setState(() => _following = true);
-        _mapController.move(loc, _followZoom);
+        _flyTo(loc, _followZoom);
       }
     }
     _showSnackForStatus(status);
+  }
+
+  /// Glides the camera to [target]. When it's off screen the camera also
+  /// rises a few zoom levels mid-way, so a long trip reads as a flight
+  /// instead of a blur of tiles. Any drag cancels it.
+  void _flyTo(LatLng target, double zoom) {
+    final camera = _mapController.camera;
+    final start = camera.center;
+    final startZoom = camera.zoom;
+    final screenPx = math.min(camera.nonRotatedSize.x, camera.nonRotatedSize.y);
+    final screens =
+        camera.project(start).distanceTo(camera.project(target)) / screenPx;
+    final rise = screens > 1
+        ? math.min(math.log(screens) / math.ln2 + 1, 4.0)
+        : 0.0;
+    final center = _LatLngTween(begin: start, end: target);
+
+    void step() {
+      final t = Curves.easeInOutCubic.transform(_flight.value);
+      _mapController.move(
+        center.transform(t),
+        startZoom + (zoom - startZoom) * t - rise * math.sin(math.pi * t),
+      );
+    }
+
+    _flight
+      ..stop()
+      ..duration = Duration(milliseconds: rise > 0 ? 1200 : 650)
+      ..addListener(step);
+    _flight
+        .forward(from: 0)
+        .whenCompleteOrCancel(() => _flight.removeListener(step));
   }
 
   void _showSnackForStatus(LocationStatus status) {
@@ -260,7 +298,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _,
       next,
     ) {
-      if (_following && next != null) {
+      // Mid-flight the GPS waits; the flight already lands on the user.
+      if (_following && next != null && !_flight.isAnimating) {
         _mapController.move(next, _mapController.camera.zoom);
       }
     });
@@ -313,7 +352,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               backgroundColor: AppColors.asphalt,
               onMapReady: () => _onCameraChanged(_mapController.camera),
               onPositionChanged: (camera, hasGesture) {
-                if (hasGesture && _following) _following = false;
+                if (hasGesture) {
+                  _flight.stop();
+                  _following = false;
+                }
                 _onCameraChanged(camera);
               },
               onTap: (_, _) {
