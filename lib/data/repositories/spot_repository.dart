@@ -414,21 +414,29 @@ class SpotCatalog extends Notifier<SpotCatalogState> {
         radiusMeters: fetchM,
       );
       final returned = {for (final r in rows) r['id'] as String};
-      // A full page may have cut off the farthest spots, so only reconcile
-      // removals when the server returned everything in the circle.
-      if (rows.length < _serverLimit) {
-        final center = LatLng(lat, lng);
-        final gone = [
-          for (final s in _spots.values)
-            if (!returned.contains(s.id) &&
-                _distance.as(LengthUnit.Meter, center, LatLng(s.lat, s.lng)) <=
-                    fetchM)
-              s.id,
-        ];
-        for (final id in gone) {
-          _spots.remove(id);
-          _data.rows.remove(id);
-        }
+      // Rows come nearest first. A full page cut off the farthest spots,
+      // so only the circle up to the last one returned is really loaded.
+      final center = LatLng(lat, lng);
+      final coveredM = rows.length < _serverLimit
+          ? fetchM
+          : _distance.as(
+              LengthUnit.Meter,
+              center,
+              LatLng(
+                (rows.last['lat'] as num).toDouble(),
+                (rows.last['lng'] as num).toDouble(),
+              ),
+            );
+      final gone = [
+        for (final s in _spots.values)
+          if (!returned.contains(s.id) &&
+              _distance.as(LengthUnit.Meter, center, LatLng(s.lat, s.lng)) <
+                  coveredM)
+            s.id,
+      ];
+      for (final id in gone) {
+        _spots.remove(id);
+        _data.rows.remove(id);
       }
       for (final row in rows) {
         final id = row['id'] as String;
@@ -439,7 +447,7 @@ class SpotCatalog extends Notifier<SpotCatalogState> {
         CachedArea(
           lat: lat,
           lng: lng,
-          radiusM: fetchM,
+          radiusM: coveredM,
           fetchedAt: DateTime.now(),
         ),
       );

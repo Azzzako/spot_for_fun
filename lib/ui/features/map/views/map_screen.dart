@@ -273,7 +273,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final visible = q.isEmpty
         ? spots
         : spots.where((s) => s.name.toLowerCase().contains(q)).toList();
-    // The header count and "nothing here" only look at what's on screen.
+    // The header count only looks at what's on screen.
     final bounds = _camera?.visibleBounds;
     final inView = bounds == null
         ? null
@@ -286,12 +286,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final showResults = _searchFocus.hasFocus && q.isNotEmpty;
     final showEmpty =
         settled && visible.isEmpty && (q.isNotEmpty || !filter.isEmpty);
-    final showNoneHere =
-        settled &&
-        !catalog.failed &&
-        inView == 0 &&
-        q.isEmpty &&
-        filter.isEmpty;
     final secondaryFilters =
         filter.difficulties.length +
         filter.bestTime.length +
@@ -428,15 +422,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     action: 'REINTENTAR',
                     onAction: () => _loadArea(force: true),
                     error: true,
-                  ),
-                if (showNoneHere && !showResults)
-                  _Banner(
-                    text: 'Sin spots en esta zona',
-                    action: 'ALEJAR',
-                    onAction: () {
-                      final c = _mapController.camera;
-                      _mapController.move(c.center, c.zoom - 1.5);
-                    },
                   ),
                 if (showEmpty && !showResults)
                   _Banner(
